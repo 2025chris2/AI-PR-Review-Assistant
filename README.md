@@ -1,15 +1,26 @@
 # AI-PR-Review-Assistant
 
-flowchart TD
-A["前端 (Vue3)<br/>输入PR → 接收SSE进度 → 展示报告"] -->|HTTP / SSE| B
-B["API 网关层 (Controller)<br/>POST /api/review/analyze<br/>GET /api/review/{taskId}/events (SSE)"] --> C
-C["编排调度层 (Service)<br/>ReviewOrchestrator<br/>- 驱动三层流水线<br/>- 维护分析状态<br/>- 通过 SSE 推送进度"] --> D
-C --> E
-C --> F
+# 系统整体架构
 
-    D["GitHub 集成模块"] & E["Diff 引擎模块"] & F["AI 引擎(Spring AI)"] --> G
+1. **前端 (Vue3)**
+   输入PR → 接收SSE进度 → 展示报告
+   ↓ HTTP / SSE
 
-    G["三层分析流水线"] --> G1
-    G1["第一层：Diff 去噪(Pre-proc)"] --> G2
-    G2["第二层：文件分块(Map-Reduce)"] --> G3
-    G3["第三层：全局聚合(Reduce)"]
+2. **API 网关层 (Controller)**
+   - POST /api/review/analyze
+   - GET /api/review/{taskId}/events (SSE)
+     ↓
+
+3. **编排调度层 (Service) - ReviewOrchestrator**
+   - 驱动三层流水线
+   - 维护分析状态
+   - 通过 SSE 推送进度
+     ↓ 并行调用
+
+   ├─ GitHub 集成模块
+   ├─ Diff 引擎模块
+   └─ AI 引擎 (Spring AI)
+   ↓ 汇总
+
+4. **三层分析流水线**
+   第一层(Diff去噪) → 第二层(文件分块) → 第三层(全局聚合)
