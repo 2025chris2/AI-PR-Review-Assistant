@@ -1,0 +1,232 @@
+============================================================
+Prompt Test Report: test1
+PR: TheAlgorithms/Java#7427 - QR Decomposition (Gram-Schmidt)
+Date: 2026-05-30
+Runs: 10
+addr: https://github.com/TheAlgorithms/Java/pull/7427
+============================================================
+
+--- Macro Stats ---
+Success rate: 10/10
+Risk levels: LOW & MEDIUM
+Risk distribution: LOW=8 MEDIUM=2
+Response time: avg=2649ms range=2048-3069ms
+Unique summaries: 9/10
+
+--- Round 1 ---
+Summary: 新增QR分解实现及单元测试，使用Gram-Schmidt过程，代码质量中等。
+Risk Level: LOW
+Risk Reason: 变更范围小，仅涉及两个文件，实现与测试对应，但存在浮点误差处理和性能优化问题。
+Cross-File Issues (1):
+  - type=OTHER
+    desc=实现文件中使用阈值比较浮点数，但测试中未覆盖边界情况（如接近零的r[j][j]），可能导致测试遗漏。
+    files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+    severity=LOW
+Architecture Suggestions (2):
+  - 考虑将getColumn和setColumn优化为直接操作矩阵，减少数组分配，提升性能。
+  - 在QRDecomposition中使用阈值比较代替严格等于0，增强数值稳定性。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 2831ms
+Error: None
+
+--- Round 2 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，但存在数值稳定性问题和性能优化空间。
+Risk Level: LOW
+Risk Reason: 实现和测试基本对应，但数值容差处理和性能优化可改进，无跨文件风险。
+Cross-File Issues (0):
+Architecture Suggestions (2):
+  - 考虑将QR分解作为矩阵库的一部分，统一异常处理和数值容差策略。
+  - 可提取公共的数值容差常量，避免硬编码。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 2048ms
+Error: None
+
+--- Round 3 ---
+Summary: 新增QR分解实现及单元测试，使用Gram-Schmidt过程。
+Risk Level: LOW
+Risk Reason: 变更范围小，仅涉及两个文件，实现与测试对应，但存在浮点精度和性能优化问题。
+Cross-File Issues (1):
+  - type=OTHER
+    desc=实现文件中的浮点数零值检查与测试文件中的精度断言不一致，可能导致测试通过但实际运行时因精度问题抛出异常。
+    files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+    severity=MEDIUM
+Architecture Suggestions (2):
+  - 考虑将矩阵操作提取为公共工具类，减少代码重复。
+  - 优化QRDecomposition中的getColumn/setColumn调用，直接操作矩阵元素以提高性能。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 2744ms
+Error: None
+
+--- Round 4 ---
+Summary: 新增QR分解实现及单元测试，使用Gram-Schmidt过程，代码质量中等，存在浮点精度和性能优化空间。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，测试覆盖基本场景，但存在浮点比较精度问题和性能优化点。
+Cross-File Issues (1):
+  - type=OTHER
+    desc=实现文件中的浮点零值判断与测试文件中的精度断言不一致，可能导致测试通过但实际运行时因精度问题抛出异常。
+    files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+    severity=MEDIUM
+Architecture Suggestions (2):
+  - 考虑将QR类的q和r字段设为final，增强不可变性。
+  - 优化getColumn/setColumn调用，直接操作矩阵数组以减少拷贝开销。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 2852ms
+Error: None
+
+--- Round 5 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，但数值稳定性差且测试覆盖不足。
+Risk Level: MEDIUM
+Risk Reason: 实现使用经典Gram-Schmidt算法，数值稳定性差；秩不足检测未考虑浮点误差；测试未覆盖边界条件如秩亏矩阵。
+Cross-File Issues (1):
+  - type=OTHER
+    desc=实现文件中的秩不足检测使用严格等于0，测试文件未包含秩亏矩阵的测试用例，可能导致误判或未覆盖关键路径。
+    files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+    severity=MEDIUM
+Architecture Suggestions (2):
+  - 考虑使用改进的Gram-Schmidt或Householder变换以提高数值稳定性。
+  - 将容差定义为常量，便于维护和调整。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 2750ms
+Error: None
+
+--- Round 6 ---
+Summary: 新增QR分解实现及单元测试，使用Gram-Schmidt过程。
+Risk Level: LOW
+Risk Reason: 变更范围小，仅涉及两个文件，实现清晰，测试覆盖基本场景，但存在浮点精度和性能优化问题。
+Cross-File Issues (1):
+  - type=OTHER
+    desc=实现文件中的浮点数比较未使用容差，测试文件未覆盖边界情况（如零向量），可能导致误判。
+    files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+    severity=MEDIUM
+Architecture Suggestions (2):
+  - 考虑将QR类的q和r字段设为final以增强不可变性。
+  - 优化getColumn/setColumn的数组拷贝，提升性能。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 2367ms
+Error: None
+
+--- Round 7 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，代码质量中等，存在精度和性能风险。
+Risk Level: MEDIUM
+Risk Reason: 实现中浮点数比较未使用容差可能导致误判，且存在性能问题；测试覆盖基本场景但未验证边界条件。
+Cross-File Issues (1):
+  - type=OTHER
+    desc=实现文件中的浮点数比较（r[j][j] == 0）未使用容差，测试文件未覆盖该边界条件（如接近零的r[j][j]）。
+    files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+    severity=MEDIUM
+Architecture Suggestions (2):
+  - 考虑将矩阵操作封装为工具类以减少重复代码。
+  - 评估是否支持非方阵或奇异矩阵，当前实现可能不兼容。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 2624ms
+Error: None
+
+--- Round 8 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，但存在浮点精度和性能问题。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，但实现中浮点比较和性能问题需关注。
+Cross-File Issues (1):
+  - type=OTHER
+    desc=实现文件使用浮点零比较，测试文件未验证数值稳定性，可能遗漏精度问题。
+    files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+    severity=MEDIUM
+Architecture Suggestions (2):
+  - 考虑将getColumn和setColumn内联到主循环中，减少数组分配开销。
+  - 使用阈值（如1e-12）判断浮点数是否为零，避免精度问题。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 2241ms
+Error: None
+
+--- Round 9 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，代码质量良好但存在浮点精度和性能问题。
+Risk Level: LOW
+Risk Reason: 变更范围小，仅涉及两个文件，实现与测试对应，风险较低。但存在浮点精度比较和性能优化问题。
+Cross-File Issues (1):
+  - type=OTHER
+    desc=实现文件中使用精确浮点比较r[j][j]==0，测试文件中使用assertEquals比较double值，但测试未覆盖r[j][j]接近0的边界情况，可能导致精度问题未被发现。
+    files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+    severity=MEDIUM
+Architecture Suggestions (2):
+  - 考虑将矩阵操作封装为内部方法，避免重复的列拷贝，提升性能。
+  - 可考虑使用现有的线性代数库（如Apache Commons Math）替代手写实现，减少维护成本。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 2971ms
+Error: None
+
+--- Round 10 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，但存在浮点数精度问题和性能优化空间。
+Risk Level: LOW
+Risk Reason: 变更范围小，仅涉及两个文件，风险较低。但浮点数比较可能因精度问题导致异常，且测试中使用了不恰当的断言方法。
+Cross-File Issues (1):
+  - type=OTHER
+    desc=实现文件中浮点数比较使用精确相等，测试文件中未针对此边界条件进行测试，可能导致精度问题未被覆盖。
+    files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+    severity=MEDIUM
+Architecture Suggestions (2):
+  - 考虑将QR分解作为矩阵类的方法，而非独立工具类，以降低耦合。
+  - 优化性能：避免频繁数组拷贝，直接操作矩阵元素。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 3069ms
+Error: None
+
+============================================================
+Comparison Across 10 Runs
+============================================================
+
+Risk Level:
+  Round 1: LOW
+  Round 2: LOW
+  Round 3: LOW
+  Round 4: LOW
+  Round 5: MEDIUM
+  Round 6: LOW
+  Round 7: MEDIUM
+  Round 8: LOW
+  Round 9: LOW
+  Round 10: LOW
+
+Cross-File Issues Count:
+  Round 1: 1
+  Round 2: 0
+  Round 3: 1
+  Round 4: 1
+  Round 5: 1
+  Round 6: 1
+  Round 7: 1
+  Round 8: 1
+  Round 9: 1
+  Round 10: 1
+
+Architecture Suggestions Count:
+  Round 1: 2
+  Round 2: 2
+  Round 3: 2
+  Round 4: 2
+  Round 5: 2
+  Round 6: 2
+  Round 7: 2
+  Round 8: 2
+  Round 9: 2
+  Round 10: 2
+
+Consistency:
+  Top files: CONSISTENT
+  Risk level: CONSISTENT (80%)
+  Summary: 9/10 unique
+
+Issues Found by AI (aggregated):
+  - 实现文件中使用精确浮点比较r[j][j]==0，测试文件中使用assertEquals比较double值，但测试未覆盖r[j][j]接近0的边界情况，可能导致精度问题未被发现。
+  - 实现文件中使用阈值比较浮点数，但测试中未覆盖边界情况（如接近零的r[j][j]），可能导致测试遗漏。
+  - 实现文件中浮点数比较使用精确相等，测试文件中未针对此边界条件进行测试，可能导致精度问题未被覆盖。
+  - 实现文件中的浮点数比较未使用容差，测试文件未覆盖边界情况（如零向量），可能导致误判。
+  - 实现文件中的浮点数比较（r[j][j] == 0）未使用容差，测试文件未覆盖该边界条件（如接近零的r[j][j]）。
+  - 实现文件中的浮点数零值检查与测试文件中的精度断言不一致，可能导致测试通过但实际运行时因精度问题抛出异常。
+  - 实现文件中的浮点零值判断与测试文件中的精度断言不一致，可能导致测试通过但实际运行时因精度问题抛出异常。
+  - 实现文件中的秩不足检测使用严格等于0，测试文件未包含秩亏矩阵的测试用例，可能导致误判或未覆盖关键路径。
+  - 实现文件使用浮点零比较，测试文件未验证数值稳定性，可能遗漏精度问题。
+
+Missing (not identified by AI in any run):
+  - Classical GS numerical instability vs Modified GS / Householder
+  - Missing support for non-square matrices (m < n)
+  - testQROrthogonalColumns uses assertArrayEquals for scalar comparison
+  - No test for rectangular matrix
