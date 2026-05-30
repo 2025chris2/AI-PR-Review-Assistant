@@ -1,0 +1,232 @@
+============================================================
+E2E Test Report: Round5
+PRs: TheAlgorithms/Java#7427 & #7420
+Date: 2026-05-30 23:09
+Runs: 5 per PR
+============================================================
+
+============================================================
+PR #7427: feat(matrix): add QR decomposition algorithm using Gram-Schmidt process
+URL: https://github.com/TheAlgorithms/Java/pull/7427
+============================================================
+
+--- Macro Stats ---
+Success rate: 5/5
+Risk distribution: LOW=0 MEDIUM=3 HIGH=2
+Response time: avg=8420ms range=8020-10023ms
+
+--- Round 1 ---
+Summary: 新增Gram-Schmidt QR分解实现及测试，但算法数值稳定性差且缺少m<n校验。
+Risk Level: HIGH
+Risk Reason: 经典Gram-Schmidt数值稳定性差，且未处理m<n情况，可能导致错误结果；测试未覆盖m<n场景。
+Cross-File Issues (2):
+  type=NUMERICAL_ACCURACY sev=HIGH
+  desc=实现文件使用经典Gram-Schmidt，测试文件未验证正交性精度，两者均未处理浮点比较问题。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+  type=OTHER sev=HIGH
+  desc=实现文件未校验m<n，测试文件也未覆盖该场景，可能导致未定义行为。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (3):
+  - 在QRDecomposition.java中，将r[j][j]==0替换为Math.abs(r[j][j]) < EPS，并定义EPS=1e-12。
+  - 在QRDecomposition.java的validateInputMatrix中添加m<n检查，抛出IllegalArgumentException。
+  - 在QRDecompositionTest.java中增加m<n矩阵测试用例，验证异常抛出。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 8020ms
+Error: None
+
+--- Round 2 ---
+Summary: 新增Gram-Schmidt QR分解实现及测试，但存在数值稳定性、边界校验和测试覆盖不足的问题。
+Risk Level: MEDIUM
+Risk Reason: 经典Gram-Schmidt算法数值稳定性差，且未处理m<n情况，测试未覆盖该边界，可能导致错误结果。
+Cross-File Issues (2):
+  type=NUMERICAL_ACCURACY sev=HIGH
+  desc=实现文件使用经典Gram-Schmidt，数值稳定性差；测试文件未验证正交性精度，且未覆盖m<n矩阵。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+  type=OTHER sev=MEDIUM
+  desc=实现文件未对m<n（列数大于行数）进行校验，测试文件也未覆盖该场景，可能导致分解失败或异常未处理。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (2):
+  - 在QRDecomposition.java中，将浮点比较r[j][j]==0改为Math.abs(r[j][j]) < EPS，并定义EPS=1e-12。
+  - 考虑将算法替换为Modified Gram-Schmidt以提高数值稳定性，或添加注释说明当前算法局限性。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 8020ms
+Error: None
+
+--- Round 3 ---
+Summary: 新增QR分解算法实现及测试，使用经典Gram-Schmidt方法，存在数值稳定性问题和边界校验缺失。
+Risk Level: MEDIUM
+Risk Reason: 实现使用数值稳定性差的经典Gram-Schmidt，且未处理m<n情况；测试未覆盖m<n场景，但基本功能测试存在。
+Cross-File Issues (2):
+  type=NUMERICAL_ACCURACY sev=HIGH
+  desc=实现文件使用经典Gram-Schmidt，数值稳定性差；测试文件未验证正交性精度，且未覆盖m<n矩阵。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+  type=OTHER sev=MEDIUM
+  desc=实现文件未对m<n（列数大于行数）进行校验，可能导致分解失败；测试文件也未覆盖该场景。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (2):
+  - 在QRDecomposition.java中，将r[j][j]==0替换为Math.abs(r[j][j]) < EPS，并定义EPS=1e-12。
+  - 考虑在QRDecomposition.java中增加对输入矩阵是否为方阵或m>=n的校验，明确算法适用范围。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 8020ms
+Error: None
+
+--- Round 4 ---
+Summary: 新增Gram-Schmidt QR分解实现及测试，但算法数值稳定性差且未处理m<n情况。
+Risk Level: HIGH
+Risk Reason: 经典Gram-Schmidt算法数值稳定性差，且未处理m<n矩阵，可能导致错误结果或异常。测试未覆盖关键边界。
+Cross-File Issues (2):
+  type=NUMERICAL_ACCURACY sev=HIGH
+  desc=实现文件使用经典Gram-Schmidt，数值稳定性差；测试文件未验证算法稳定性，且浮点比较未使用容差。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+  type=OTHER sev=HIGH
+  desc=实现文件未处理m<n矩阵，测试文件也未覆盖该场景，可能导致未定义行为。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (3):
+  - 在QRDecomposition.java中，将r[j][j]==0改为Math.abs(r[j][j]) < EPS，并定义EPS=1e-12。
+  - 在QRDecomposition.java中，添加对m<n的校验，若m<n则抛出IllegalArgumentException。
+  - 在QRDecompositionTest.java中，增加对零矩阵、非方阵（m>n）等边界情况的测试，并统一使用DELTA常量进行浮点比较。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 10023ms
+Error: None
+
+--- Round 5 ---
+Summary: 新增Gram-Schmidt QR分解实现及测试，但存在数值稳定性、边界校验缺失等问题。
+Risk Level: MEDIUM
+Risk Reason: 经典Gram-Schmidt数值稳定性差，且未处理m<n情况，测试覆盖不足。
+Cross-File Issues (2):
+  type=NUMERICAL_ACCURACY sev=HIGH
+  desc=实现文件使用经典Gram-Schmidt，测试文件未验证数值稳定性，两者均未处理浮点比较问题。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+  type=OTHER sev=MEDIUM
+  desc=实现文件未校验m<n情况，测试文件也未覆盖该边界条件。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (3):
+  - 在QRDecomposition.java中，将经典Gram-Schmidt替换为Modified Gram-Schmidt以提高数值稳定性。
+  - 在QRDecomposition.java中，将r[j][j]==0改为Math.abs(r[j][j]) < EPS，并定义EPS=1e-12。
+  - 在QRDecomposition.java的validateInputMatrix中，添加对m<n的检查，若m<n则抛出IllegalArgumentException。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 8021ms
+Error: None
+
+============================================================
+Comparison Across 5 Runs
+============================================================
+
+Risk Level:
+  Round 1: HIGH
+  Round 2: MEDIUM
+  Round 3: MEDIUM
+  Round 4: HIGH
+  Round 5: MEDIUM
+
+Cross-File Issues Count:
+  Round 1: 2
+  Round 2: 2
+  Round 3: 2
+  Round 4: 2
+  Round 5: 2
+
+Consistency:
+  Unique summaries: 5/5
+  Top files: CONSISTENT
+
+============================================================
+PR #7420: NeonNumber algorithm in maths package
+URL: https://github.com/TheAlgorithms/Java/pull/7420
+============================================================
+
+--- Macro Stats ---
+Success rate: 5/5
+Risk distribution: LOW=0 MEDIUM=5 HIGH=0
+Response time: avg=6417ms range=6015-8020ms
+
+--- Round 1 ---
+Summary: 新增NeonNumber算法及对应测试，实现数字平方各位和等于自身的判断。
+Risk Level: MEDIUM
+Risk Reason: 变更独立，无跨文件交互，测试覆盖基本功能，但边界测试不足。
+Cross-File Issues (0):
+Architecture Suggestions (2):
+  - 在NeonNumber.java中添加负数处理逻辑，例如取绝对值或抛出IllegalArgumentException，以明确行为。
+  - 在NeonNumberTest.java中增加负数、大数等边界测试用例，确保算法鲁棒性。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 6018ms
+Error: None
+
+--- Round 2 ---
+Summary: 新增NeonNumber算法及对应测试，实现数字是否为Neon数的判断。
+Risk Level: MEDIUM
+Risk Reason: 变更独立，无跨文件交互，风险低。但负数处理未明确，测试覆盖不足。
+Cross-File Issues (1):
+  type=OTHER sev=LOW
+  desc=实现文件与测试文件对应，但测试未覆盖负数和大数边界，可能遗漏鲁棒性验证。
+  files=['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Architecture Suggestions (1):
+  - 在NeonNumber.java中添加负数输入处理，例如返回false或抛出IllegalArgumentException，并更新测试。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 6015ms
+Error: None
+
+--- Round 3 ---
+Summary: 新增NeonNumber算法实现及对应测试，代码简洁，但缺少负数边界处理。
+Risk Level: MEDIUM
+Risk Reason: 变更独立，无跨文件交互，测试覆盖基本功能，但边界条件覆盖不足。
+Cross-File Issues (0):
+Architecture Suggestions (2):
+  - 在NeonNumber.java中添加负数输入处理，例如返回false或抛出IllegalArgumentException。
+  - 在NeonNumberTest.java中补充负数和大数测试用例，确保边界覆盖。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 8020ms
+Error: None
+
+--- Round 4 ---
+Summary: 新增NeonNumber算法实现及对应测试，代码简洁，风险低。
+Risk Level: MEDIUM
+Risk Reason: 变更独立，无跨文件交互，测试覆盖基本边界，但缺少负数和大数测试。
+Cross-File Issues (0):
+Architecture Suggestions (2):
+  - 在NeonNumber.java中添加注释说明算法仅适用于非负整数，或增加负数处理逻辑。
+  - 在NeonNumberTest.java中添加负数和大数测试用例以增强鲁棒性。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 6016ms
+Error: None
+
+--- Round 5 ---
+Summary: 新增NeonNumber算法实现及对应测试，代码简洁，但缺少负数处理和大数边界测试。
+Risk Level: MEDIUM
+Risk Reason: 变更独立，无跨文件交互，风险低；但负数处理逻辑可能不符合预期，测试覆盖不足。
+Cross-File Issues (1):
+  type=OTHER sev=LOW
+  desc=实现文件NeonNumber.java对负数输入返回false，但测试文件NeonNumberTest.java未覆盖负数用例，可能导致用户误解行为。
+  files=['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Architecture Suggestions (2):
+  - 在NeonNumber.java中添加负数输入处理，例如抛出IllegalArgumentException或返回false并注释说明。
+  - 在NeonNumberTest.java中增加负数、大数（如Integer.MAX_VALUE）等边界测试用例。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 6016ms
+Error: None
+
+============================================================
+Comparison Across 5 Runs
+============================================================
+
+Risk Level:
+  Round 1: MEDIUM
+  Round 2: MEDIUM
+  Round 3: MEDIUM
+  Round 4: MEDIUM
+  Round 5: MEDIUM
+
+Cross-File Issues Count:
+  Round 1: 0
+  Round 2: 1
+  Round 3: 0
+  Round 4: 0
+  Round 5: 1
+
+Consistency:
+  Unique summaries: 5/5
+  Top files: CONSISTENT
+
+============================================================
+Report Complete
+============================================================
