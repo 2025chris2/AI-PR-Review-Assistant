@@ -2,6 +2,10 @@ package com.prassistant.pr.review.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prassistant.pr.aggregation.model.GlobalReviewReport;
+import com.prassistant.pr.aggregation.model.PrMetadata;
+import com.prassistant.pr.github.GitHubApiClient;
+import com.prassistant.pr.github.GitHubApiException;
+import com.prassistant.pr.github.GitHubPrData;
 import com.prassistant.pr.orchestrator.ReviewOrchestrator;
 import com.prassistant.pr.orchestrator.event.ReviewEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,7 +20,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -32,6 +39,9 @@ class ReviewControllerTest {
     @Mock
     private ReviewEventPublisher eventPublisher;
 
+    @Mock
+    private GitHubApiClient gitHubApiClient;
+
     private ObjectMapper objectMapper;
 
     @BeforeEach
@@ -39,7 +49,7 @@ class ReviewControllerTest {
         objectMapper = new ObjectMapper();
         // 同步执行器，让 async 任务在当前线程立即执行
         ReviewController controller = new ReviewController(
-                orchestrator, eventPublisher, Runnable::run);
+                orchestrator, eventPublisher, gitHubApiClient, Runnable::run);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -138,6 +148,136 @@ class ReviewControllerTest {
             mockMvc.perform(get("/api/v1/reviews/nonexistent/result"))
                     .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/v1/reviews/github — 从 GitHub 创建 Review")
+    class CreateReviewFromGithub {
+
+        @Test
+        @DisplayName("有效请求应返回 202 和 taskId")
+        void shouldReturn202WithTaskId() throws Exception {
+            PrMetadata metadata = PrMetadata.builder()
+                    .prUrl("https://github.com/org/repo/pull/1")
+                    .title("test")
+                    .author("octocat")
+                    .build();
+            GitHubPrData prData = new GitHubPrData(metadata, "diff --git a/Test.java b/Test.java\n@@ -1,1 +1,1 @@\n-old\n+new");
+
+            when(gitHubApiClient.fetchAll(eq("octocat"), eq("hello-world"), eq(1), eq("token-abc")))
+                    .thenReturn(prData);
+            when(orchestrator.review(anyString(), any()))
+                    .thenReturn(GlobalReviewReport.builder()
+                            .overallSummary("test")
+                            .globalRiskLevel(GlobalReviewReport.RiskLevel.LOW)
+                            .build());
+
+            GitHubReviewRequest request = new GitHubReviewRequest("octocat", "hello-world", 1, "token-abc");
+
+            mockMvc.perform(post("/api/v1/reviews/github")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.taskId").isNotEmpty())
+                    .andExpect(jsonPath("$.eventsUrl").isString())
+                    .andExpect(jsonPath("$.resultUrl").isString());
+
+            verify(gitHubApiClient).fetchAll("octocat", "hello-world", 1, "token-abc");
+            verify(orchestrator).review(anyString(), any());
+        }
+
+        @Test
+        @DisplayName("空 owner 应返回 400")
+        void shouldReturn400ForEmptyOwner() throws Exception {
+            GitHubReviewRequest request = new GitHubReviewRequest("", "hello-world", 1, "token");
+
+            mockMvc.perform(post("/api/v1/reviews/github")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("owner is required"));
+        }
+
+        @Test
+        @DisplayName("空 repo 应返回 400")
+        void shouldReturn400ForEmptyRepo() throws Exception {
+            GitHubReviewRequest request = new GitHubReviewRequest("octocat", "", 1, "token");
+
+            mockMvc.perform(post("/api/v1/reviews/github")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("repo is required"));
+        }
+
+        @Test
+        @DisplayName("无效 prNumber 应返回 400")
+        void shouldReturn400ForInvalidPrNumber() throws Exception {
+            GitHubReviewRequest request = new GitHubReviewRequest("octocat", "hello-world", 0, "token");
+
+            mockMvc.perform(post("/api/v1/reviews/github")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("prNumber must be positive"));
+        }
+
+        @Test
+        @DisplayName("空 token 应返回 400")
+        void shouldReturn400ForEmptyToken() throws Exception {
+            GitHubReviewRequest request = new GitHubReviewRequest("octocat", "hello-world", 1, "");
+
+            mockMvc.perform(post("/api/v1/reviews/github")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("token is required"));
+        }
+
+        @Test
+        @DisplayName("GitHub 404 应返回 404")
+        void shouldReturn404OnGitHubNotFound() throws Exception {
+            when(gitHubApiClient.fetchAll(anyString(), anyString(), anyInt(), anyString()))
+                    .thenThrow(GitHubApiException.notFound("octocat", "hello-world", 999));
+
+            GitHubReviewRequest request = new GitHubReviewRequest("octocat", "hello-world", 999, "token");
+
+            mockMvc.perform(post("/api/v1/reviews/github")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("not found")));
+        }
+
+        @Test
+        @DisplayName("GitHub 401 应返回 401")
+        void shouldReturn401OnBadCredentials() throws Exception {
+            when(gitHubApiClient.fetchAll(anyString(), anyString(), anyInt(), anyString()))
+                    .thenThrow(GitHubApiException.badCredentials());
+
+            GitHubReviewRequest request = new GitHubReviewRequest("octocat", "hello-world", 1, "bad-token");
+
+            mockMvc.perform(post("/api/v1/reviews/github")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("token")));
+        }
+
+        @Test
+        @DisplayName("GitHub 403 应返回 403")
+        void shouldReturn403OnRateLimit() throws Exception {
+            when(gitHubApiClient.fetchAll(anyString(), anyString(), anyInt(), anyString()))
+                    .thenThrow(GitHubApiException.rateLimited("1234567890"));
+
+            GitHubReviewRequest request = new GitHubReviewRequest("octocat", "hello-world", 1, "token");
+
+            mockMvc.perform(post("/api/v1/reviews/github")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("rate limit")));
         }
     }
 }
