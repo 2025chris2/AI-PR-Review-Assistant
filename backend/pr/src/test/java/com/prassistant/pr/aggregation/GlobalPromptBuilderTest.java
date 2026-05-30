@@ -49,6 +49,7 @@ class GlobalPromptBuilderTest {
             assertTrue(prompt.contains("资深的代码评审专家"));
             assertTrue(prompt.contains("全局推理分析"));
             assertTrue(prompt.contains("架构层面的影响"));
+            assertTrue(prompt.contains("实现与测试的对应性"));
         }
 
         @Test
@@ -111,6 +112,7 @@ class GlobalPromptBuilderTest {
             assertTrue(prompt.contains("推理要求"));
             assertTrue(prompt.contains("至少两个文件"));
             assertTrue(prompt.contains("不超过 3 个"));
+            assertTrue(prompt.contains("测试缺失风险"));
         }
 
         @Test

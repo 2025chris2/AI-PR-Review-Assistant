@@ -17,7 +17,7 @@ public final class ChunkPromptBuilder {
     /** 系统角色设定 */
     static final String SYSTEM_ROLE = """
             你是一位资深的代码评审专家。专注于以下方面：
-            - 正确性：逻辑错误、边界条件、异常处理
+            - 正确性：逻辑错误、边界条件、算术误差(off-by-one/舍入)、异常处理
             - 安全性：注入风险、权限校验、数据加密
             - 性能：N+1查询、资源泄漏、缓存机会
             - 并发：竞态条件、死锁、线程安全
@@ -30,7 +30,7 @@ public final class ChunkPromptBuilder {
             {
               "summary": "变更摘要（不超过30字）",
               "risks": [
-                { "type": "NullPointer|Concurrency|Security|Performance|Maintainability|Other", "line": 行号, "description": "风险说明（不超过100字）" }
+                { "type": "NullPointer|Concurrency|Security|Performance|Arithmetic|Maintainability|Other", "line": 行号, "description": "风险说明（不超过100字）" }
               ],
               "suggestions": [
                 { "priority": 1-5, "description": "建议内容（不超过100字）" }
@@ -42,7 +42,9 @@ public final class ChunkPromptBuilder {
     /** 单块模式额外要求 */
     static final String CHUNK_CROSS_CHUNK_HINT =
             "5. 跨块依赖提示：如果当前块修改了接口签名、删除了方法、新增了全局变量或修改了配置项，"
-                    + "请详细描述这些变更，格式：变更内容 -> 影响范围 -> 后续需关注的文件\n";
+                    + "请详细描述这些变更，格式：变更内容 -> 影响范围 -> 后续需关注的文件\n"
+                    + "6. 实现与测试关联提示：如果当前块是实现代码，检查是否有对应的测试文件变更；"
+                    + "如果是测试代码，说明覆盖了哪些实现路径\n";
 
     /** 反幻觉约束 */
     static final String ANTI_HALLUCINATION =
