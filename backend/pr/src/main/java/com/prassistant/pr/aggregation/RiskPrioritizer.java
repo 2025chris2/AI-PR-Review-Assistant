@@ -219,7 +219,13 @@ public final class RiskPrioritizer {
         if (crossFileIssues != null) {
             for (GlobalReviewReport.CrossFileIssue issue : crossFileIssues) {
                 if (containsKeyword(issue.getDescription(), FATAL_RISK_KEYWORDS)) return true;
-                if ("HIGH".equalsIgnoreCase(issue.getSeverity())) return true;
+                // 仅安全漏洞和事务缺失类问题信任 AI severity=HIGH；
+                // 数值精度/性能等问题即使 AI 标 HIGH 也不强制升级
+                if ("HIGH".equalsIgnoreCase(issue.getSeverity())
+                        && (issue.getIssueType() == GlobalReviewReport.IssueType.SECURITY_VULNERABILITY
+                            || issue.getIssueType() == GlobalReviewReport.IssueType.TRANSACTION_MISSING)) {
+                    return true;
+                }
             }
         }
         return false;
