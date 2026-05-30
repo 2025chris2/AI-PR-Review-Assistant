@@ -13,8 +13,8 @@ public class SanitizedDiff {
     /** 文件路径（如 src/main/java/UserService.java） */
     private String filePath;
 
-    /** 变更状态：added / removed / modified / renamed */
-    private String status = "modified";
+    /** 变更状态 */
+    private FileChangeType status = FileChangeType.MODIFIED;
 
     /** 去噪后的完整 diff 文本（可直接用于 AI 输入） */
     private String sanitizedContent;

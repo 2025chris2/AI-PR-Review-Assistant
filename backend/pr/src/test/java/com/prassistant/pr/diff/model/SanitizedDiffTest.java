@@ -9,13 +9,13 @@ class SanitizedDiffTest {
     void testFieldSetAndGet() {
         SanitizedDiff diff = new SanitizedDiff();
         diff.setFilePath("src/main/User.java");
-        diff.setStatus("modified");
+        diff.setStatus(FileChangeType.MODIFIED);
         diff.setOriginalLineCount(50);
         diff.setSanitizedLineCount(40);
         diff.setSavingsRatio(0.2);
 
         assertEquals("src/main/User.java", diff.getFilePath());
-        assertEquals("modified", diff.getStatus());
+        assertEquals(FileChangeType.MODIFIED, diff.getStatus());
         assertEquals(50, diff.getOriginalLineCount());
         assertEquals(40, diff.getSanitizedLineCount());
         assertEquals(0.2, diff.getSavingsRatio(), 0.001);
@@ -28,7 +28,7 @@ class SanitizedDiffTest {
         SanitizedDiff diff = new SanitizedDiff();
 
         assertNull(diff.getFilePath());
-        assertEquals("modified", diff.getStatus());
+        assertEquals(FileChangeType.MODIFIED, diff.getStatus());
         assertNull(diff.getSanitizedContent());
         assertNotNull(diff.getHunks());
         assertTrue(diff.getHunks().isEmpty());
