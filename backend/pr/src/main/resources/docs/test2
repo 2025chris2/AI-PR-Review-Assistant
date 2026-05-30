@@ -1,0 +1,101 @@
+============================================================
+Prompt Test Report: test2 (V3 Prompts)
+PR: TheAlgorithms/Java#7427 - QR Decomposition
+Date: 2026-05-30
+Runs: 5
+============================================================
+
+--- Macro Stats ---
+Success rate: 5/5
+Risk levels: LOW=5 MEDIUM=0
+
+--- Round 1 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，代码质量中等，存在浮点精度和性能优化空间。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，风险较低；但浮点数比较和性能问题需关注。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件中的浮点数零值判断与测试文件中的精度断言不一致，可能导致测试通过但实际运行时因精度问题抛出异常。
+Architecture Suggestions (2):
+  - 考虑将QR类的q和r字段设为final以增强不可变性。
+  - 优化getColumn/setColumn调用，减少数组拷贝，提升性能。
+Time: 2736ms
+
+--- Round 2 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，存在浮点精度和测试断言问题。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件交互，但存在浮点精度和测试断言错误，整体风险低。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件中浮点数比较未使用容差，测试文件中断言方法使用错误，两者不一致可能导致测试误判。
+Architecture Suggestions (1):
+  - 考虑复用数组或使用矩阵操作库以减少临时数组分配，提升性能。
+Time: 2431ms
+
+--- Round 3 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，但存在浮点误差处理和性能优化问题。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，但实现中浮点误差处理不完善，测试覆盖基本场景但边界条件不足。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件中的浮点误差处理（r[j][j]==0）与测试文件中的精度比较（DELTA）不一致，可能导致误判。
+Architecture Suggestions (2):
+  - 考虑将矩阵操作封装为工具类，减少重复的getColumn/setColumn调用。
+  - 评估是否支持非方阵或秩亏矩阵，当前实现可能抛出异常。
+Time: 2680ms
+
+--- Round 4 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，代码质量中等，存在浮点精度和性能问题。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，风险较低，但浮点比较和性能优化需关注。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件中的浮点零比较与测试文件中的精度断言不一致，可能导致测试通过但实际运行时因精度问题失败。
+Architecture Suggestions (2):
+  - 考虑将矩阵操作抽象为工具类，减少重复的getColumn/setColumn调用，提升性能。
+  - 确保QR分解接口与现有矩阵类兼容，未来可扩展为接口实现。
+Time: 2704ms
+
+--- Round 5 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，代码质量中等，存在浮点精度和性能问题。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，风险较低，但浮点比较和性能优化需关注。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件中的浮点零比较与测试文件中的精度断言不一致，测试未覆盖浮点边界情况。
+Architecture Suggestions (2):
+  - 考虑将矩阵存储优化为行主序或一维数组，减少列提取操作的开销。
+  - 提取公共的矩阵操作工具类，避免重复的列拷贝逻辑。
+Time: 2765ms
+
+============================================================
+V1 vs V3 改进效果对比
+============================================================
+
+经典 GS 数值稳定性检出:
+  V1: 1/10 (10%)
+  V3: 0/5 (0%) — 未改善 ❌
+
+m<n 矩阵边界检出:
+  V1: 0/10 (0%)
+  V3: 2/5 (40%) — 部分改善 ✅
+
+摘要模板一致:
+  V1: 0/10 (自由发挥)
+  V3: 0/5 (仍自由发挥) — 未改善 ❌
+
+风险评级一致:
+  V1: 80%一致性 (8 LOW, 2 MEDIUM)
+  V3: 100%一致性 (5 LOW) — 更稳定但偏低 ❌
+
+issueType 多样性:
+  V1: 100% OTHER
+  V3: 100% OTHER — 未改善 ❌
+
+架构建议收敛:
+  V1: Round 9 建议「使用第三方库替换」
+  V3: 建议更聚焦（无第三方库建议）— 部分改善 ✅
+
+============================================================
+结论：纯提示词修改效果有限，需要后端规则兜底
+============================================================
