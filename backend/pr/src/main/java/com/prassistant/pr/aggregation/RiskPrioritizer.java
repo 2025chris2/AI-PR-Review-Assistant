@@ -1,6 +1,7 @@
 package com.prassistant.pr.aggregation;
 
 import com.prassistant.pr.aggregation.model.GlobalReviewReport;
+import com.prassistant.pr.review.model.ChunkReviewResult;
 import com.prassistant.pr.review.model.FileReviewReport;
 
 import java.util.ArrayList;
@@ -29,6 +30,17 @@ public final class RiskPrioritizer {
             "支付", "订单", "库存", "交易", "扣减", "退款"
     );
 
+    /** 数值精度/算法稳定性关键词 — 命中则强制 MEDIUM */
+    private static final Set<String> NUMERICAL_RISK_KEYWORDS = Set.of(
+            "精度", "浮点", "epsilon", "容差", "舍入", "数值稳定性",
+            "Gram", "Schmidt", "正交化", "QR分解", "最小二乘"
+    );
+
+    /** 致命风险关键词 — 命中则强制 HIGH */
+    private static final Set<String> FATAL_RISK_KEYWORDS = Set.of(
+            "崩溃", "死循环", "数据丢失", "内存泄漏", "空指针", "注入"
+    );
+
     private RiskPrioritizer() {
         // utility class
     }
@@ -48,10 +60,16 @@ public final class RiskPrioritizer {
         List<GlobalReviewReport.CrossFileIssue> dedupedIssues = dedupCrossFileIssues(
                 rawReport.getCrossFileIssues());
 
-        // 2. 风险校准
+        // 2a. 风险校准（基于核心流程关键词）
         GlobalReviewReport.RiskLevel calibratedRisk = calibrateRiskLevel(
                 rawReport.getGlobalRiskLevel(),
                 rawReport.getFileReports());
+
+        // 2b. 强制评级（基于实际风险条目内容匹配）
+        GlobalReviewReport.RiskLevel enforcedRisk = enforceRiskLevel(
+                calibratedRisk,
+                rawReport.getFileReports(),
+                rawReport.getCrossFileIssues());
 
         // 3. 文件排序 + topPriorityFiles
         List<String> topFiles = computeTopPriorityFiles(rawReport.getFileReports());
@@ -63,7 +81,7 @@ public final class RiskPrioritizer {
                 .taskId(rawReport.getTaskId())
                 .prUrl(rawReport.getPrUrl())
                 .overallSummary(truncatedSummary)
-                .globalRiskLevel(calibratedRisk)
+                .globalRiskLevel(enforcedRisk)
                 .globalRiskReason(rawReport.getGlobalRiskReason())
                 .crossFileIssues(dedupedIssues)
                 .architectureSuggestions(rawReport.getArchitectureSuggestions())
@@ -149,6 +167,97 @@ public final class RiskPrioritizer {
         }
 
         return GlobalReviewReport.RiskLevel.LOW;
+    }
+
+    /**
+     * 强制评级 — 基于实际风险条目内容硬算最低风险级别，覆盖 AI 评级
+     *
+     * <p>规则：
+     * <ul>
+     *   <li>任何风险描述含崩溃/死循环/数据丢失等关键词 → HIGH
+     *   <li>任何风险描述含精度/浮点/Gram/数值稳定性等关键词 → 至少 MEDIUM
+     *   <li>crossFileIssue 类型为 NUMERICAL_ACCURACY 或 ALGORITHM_CHOICE → 至少 MEDIUM
+     * </ul>
+     */
+    static GlobalReviewReport.RiskLevel enforceRiskLevel(
+            GlobalReviewReport.RiskLevel currentLevel,
+            List<FileReviewReport> fileReports,
+            List<GlobalReviewReport.CrossFileIssue> crossFileIssues) {
+
+        if (fileReports == null && crossFileIssues == null) {
+            return currentLevel != null ? currentLevel : GlobalReviewReport.RiskLevel.LOW;
+        }
+
+        // 检查致命风险 → HIGH
+        if (hasFatalRisk(fileReports, crossFileIssues)) {
+            return GlobalReviewReport.RiskLevel.HIGH;
+        }
+
+        // 检查数值精度/算法风险 → 至少 MEDIUM
+        if (hasNumericalRisk(fileReports, crossFileIssues)) {
+            if (currentLevel == GlobalReviewReport.RiskLevel.HIGH) {
+                return currentLevel;
+            }
+            return GlobalReviewReport.RiskLevel.MEDIUM;
+        }
+
+        return currentLevel != null ? currentLevel : GlobalReviewReport.RiskLevel.LOW;
+    }
+
+    private static boolean hasFatalRisk(
+            List<FileReviewReport> fileReports,
+            List<GlobalReviewReport.CrossFileIssue> crossFileIssues) {
+        if (fileReports != null) {
+            for (FileReviewReport report : fileReports) {
+                if (report.getRisks() != null) {
+                    for (ChunkReviewResult.RiskItem risk : report.getRisks()) {
+                        if (containsKeyword(risk.description(), FATAL_RISK_KEYWORDS)) return true;
+                    }
+                }
+            }
+        }
+        if (crossFileIssues != null) {
+            for (GlobalReviewReport.CrossFileIssue issue : crossFileIssues) {
+                if (containsKeyword(issue.getDescription(), FATAL_RISK_KEYWORDS)) return true;
+                if ("HIGH".equalsIgnoreCase(issue.getSeverity())) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasNumericalRisk(
+            List<FileReviewReport> fileReports,
+            List<GlobalReviewReport.CrossFileIssue> crossFileIssues) {
+        if (crossFileIssues != null) {
+            for (GlobalReviewReport.CrossFileIssue issue : crossFileIssues) {
+                if (issue.getIssueType() == GlobalReviewReport.IssueType.NUMERICAL_ACCURACY
+                        || issue.getIssueType() == GlobalReviewReport.IssueType.ALGORITHM_CHOICE) {
+                    return true;
+                }
+                if (containsKeyword(issue.getDescription(), NUMERICAL_RISK_KEYWORDS)) return true;
+            }
+        }
+        if (fileReports != null) {
+            for (FileReviewReport report : fileReports) {
+                if (report.getRisks() != null) {
+                    for (ChunkReviewResult.RiskItem risk : report.getRisks()) {
+                        if (risk.type() != null && (risk.type().contains("Arithmetic")
+                                || risk.type().contains("Numerical")
+                                || risk.type().contains("Precision"))) {
+                            return true;
+                        }
+                        if (containsKeyword(risk.description(), NUMERICAL_RISK_KEYWORDS)) return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsKeyword(String text, Set<String> keywords) {
+        if (text == null) return false;
+        String lower = text.toLowerCase();
+        return keywords.stream().anyMatch(kw -> lower.contains(kw.toLowerCase()));
     }
 
     /**
