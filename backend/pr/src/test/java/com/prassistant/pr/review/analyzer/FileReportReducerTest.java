@@ -71,7 +71,7 @@ class FileReportReducerTest {
             FileReviewReport report = reducer.reduce(List.of(result), "UserService.java", FileChangeType.MODIFIED);
 
             assertEquals("UserService.java", report.getFilePath());
-            assertEquals("Fixed NPE", report.getOverallSummary());
+            assertEquals("变更 Fixed NPE", report.getOverallSummary());
             assertEquals(FileReviewReport.RiskLevel.HIGH, report.getRiskLevel());
             assertEquals(1, report.getRisks().size());
             assertEquals("NullPointer", report.getRisks().get(0).type());
@@ -153,7 +153,7 @@ class FileReportReducerTest {
         @DisplayName("单块直接返回摘要")
         void shouldReturnSingleSummary() {
             var r = chunkResult("hunk-1", "Fixed NPE in findById", ChunkReviewResult.RiskLevel.LOW, null, null);
-            assertEquals("Fixed NPE in findById", reducer.buildOverallSummary(List.of(r)));
+            assertEquals("变更 Fixed NPE in findById", reducer.buildOverallSummary(List.of(r)));
         }
 
         @Test
