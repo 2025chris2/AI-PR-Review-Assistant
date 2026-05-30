@@ -21,8 +21,8 @@ public class ReviewEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(ReviewEventPublisher.class);
 
-    /** 默认 SSE 超时时间（毫秒，-1 表示不超时） */
-    static final long DEFAULT_SSE_TIMEOUT = 180_000L; // 3 分钟
+    /** 默认 SSE 超时时间（毫秒） */
+    static final long DEFAULT_SSE_TIMEOUT = 360_000L; // 6 分钟
 
     /**
      * 按 taskId 管理的 emitter 映射
@@ -54,6 +54,8 @@ public class ReviewEventPublisher {
     /**
      * 推送事件到指定任务的所有连接
      *
+     * <p>使用 {@link ReviewEventType#getSseName()} 作为 SSE 事件名称，</p>
+     *
      * @param event Review 事件
      */
     public void publish(ReviewEvent event) {
@@ -71,7 +73,7 @@ public class ReviewEventPublisher {
         for (SseEmitter emitter : emitterList) {
             try {
                 emitter.send(SseEmitter.event()
-                        .name(event.getType().name().toLowerCase())
+                        .name(event.getType().getSseName())
                         .data(event));
             } catch (Exception e) {
                 log.warn("SSE send failed task={}, removing emitter: {}",
