@@ -23,6 +23,9 @@ import java.util.concurrent.ForkJoinPool;
 
 /**
  * Review REST API — 触发分析、SSE 推送进度、查询结果
+ *
+ * <p>SSE 事件流由 {@link ReviewOrchestrator} 内部推送，Controller 仅发起异步任务
+ * 并负责发布 {@link ReviewEventType#RESULT} 和 {@link ReviewEventType#ERROR} 终态事件。</p>
  */
 @RestController
 @RequestMapping("/api/v1/reviews")
@@ -56,7 +59,8 @@ public class ReviewController {
      * 发起 Review 分析
      *
      * <p>返回 202 Accepted 包含 taskId，分析在后台异步执行。
-     * 前端可通过 {@link #streamEvents(String)} 连接 SSE 监听进度。</p>
+     * 分析期间 Orchestrator 通过 SSE 推送进度事件，完成后 Controller
+     * 推送 RESULT 或 ERROR 事件。</p>
      */
     @PostMapping
     public ResponseEntity<ReviewCreateResponse> createReview(@RequestBody ReviewRequest request) {
@@ -65,40 +69,9 @@ public class ReviewController {
         }
 
         PrMetadata metadata = buildMetadata(request);
-        String taskId = java.util.UUID.randomUUID().toString().substring(0, 8);
+        String taskId = startAsyncAnalysis(request.rawDiff(), metadata);
 
-        // 推送任务创建事件
-        eventPublisher.publish(ReviewEvent.stageEvent(
-                ReviewEventType.TASK_CREATED, taskId, "分析任务已创建"));
-
-        // 异步执行分析
-        CompletableFuture.runAsync(() -> {
-            try {
-                GlobalReviewReport report = orchestrator.review(request.rawDiff(), metadata);
-                // 补充 taskId（orchestrator 内部已设置，确保兜底）
-                if (report != null && report.getTaskId() == null) {
-                    report.setTaskId(taskId);
-                }
-                if (report != null) {
-                    resultCache.put(taskId, report);
-                }
-
-                eventPublisher.publish(ReviewEvent.stageEvent(
-                        ReviewEventType.COMPLETED, taskId, "分析完成"));
-            } catch (Exception e) {
-                log.error("Async review failed task={}: {}", taskId, e.getMessage());
-                eventPublisher.publish(ReviewEvent.stageEvent(
-                        ReviewEventType.FAILED, taskId, "分析失败: " + e.getMessage()));
-            } finally {
-                eventPublisher.complete(taskId);
-            }
-        }, executor);
-
-        String eventsUrl = "/api/v1/reviews/" + taskId + "/events";
-        String resultUrl = "/api/v1/reviews/" + taskId + "/result";
-
-        return ResponseEntity.accepted()
-                .body(new ReviewCreateResponse(taskId, eventsUrl, resultUrl));
+        return buildAcceptedResponse(taskId);
     }
 
     /**
@@ -124,6 +97,58 @@ public class ReviewController {
         }
         return ResponseEntity.accepted()
                 .body(Map.of("taskId", taskId, "status", "PENDING"));
+    }
+
+    /**
+     * 异步执行分析 — 只负责起止事件，中间进度由 Orchestrator 推送
+     *
+     * @return taskId
+     */
+    private String startAsyncAnalysis(String rawDiff, PrMetadata metadata) {
+        String taskId = java.util.UUID.randomUUID().toString().substring(0, 8);
+
+        // 同步推送 task.started
+        eventPublisher.publish(ReviewEvent.stageEvent(
+                ReviewEventType.TASK_STARTED, taskId, "分析任务已启动",
+                Map.of("taskId", taskId, "totalFiles", metadata != null ? metadata.getTotalFiles() : 0)));
+
+        // 异步执行分析
+        CompletableFuture.runAsync(() -> {
+            try {
+                // orchestrator 内部推送 L1/L2/L3 进度，使用外部 taskId 保证 SSE 路由一致
+                GlobalReviewReport report = orchestrator.review(rawDiff, metadata, taskId);
+
+                // 补充 taskId（确保兜底）
+                if (report != null && report.getTaskId() == null) {
+                    report.setTaskId(taskId);
+                }
+                if (report != null) {
+                    resultCache.put(taskId, report);
+                }
+
+                // 推送 result 事件
+                eventPublisher.publish(ReviewEvent.stageEvent(
+                        ReviewEventType.RESULT, taskId, "分析完成"));
+
+            } catch (Exception e) {
+                log.error("Async review failed task={}: {}", taskId, e.getMessage());
+                eventPublisher.publish(ReviewEvent.errorEvent(
+                        taskId, "PIPELINE", "分析失败: " + e.getMessage(), false));
+            } finally {
+                eventPublisher.complete(taskId);
+            }
+        }, executor);
+
+        return taskId;
+    }
+
+    /** 构建 202 Accepted 响应 */
+    private ResponseEntity<ReviewCreateResponse> buildAcceptedResponse(String taskId) {
+        String eventsUrl = "/api/v1/reviews/" + taskId + "/events";
+        String resultUrl = "/api/v1/reviews/" + taskId + "/result";
+
+        return ResponseEntity.accepted()
+                .body(new ReviewCreateResponse(taskId, eventsUrl, resultUrl));
     }
 
     private PrMetadata buildMetadata(ReviewRequest request) {

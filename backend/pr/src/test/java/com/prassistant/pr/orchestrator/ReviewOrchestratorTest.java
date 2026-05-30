@@ -6,6 +6,7 @@ import com.prassistant.pr.aggregation.model.PrMetadata;
 import com.prassistant.pr.diff.model.FileChangeType;
 import com.prassistant.pr.diff.model.SanitizedDiff;
 import com.prassistant.pr.diff.service.DiffSanitizer;
+import com.prassistant.pr.orchestrator.event.ReviewEventPublisher;
 import com.prassistant.pr.review.FileChunkAnalyzer;
 import com.prassistant.pr.review.model.FileReviewReport;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,11 +38,15 @@ class ReviewOrchestratorTest {
     @Mock
     private GlobalAggregator globalAggregator;
 
+    @Mock
+    private ReviewEventPublisher eventPublisher;
+
     private ReviewOrchestrator orchestrator;
 
     @BeforeEach
     void setUp() {
-        orchestrator = new ReviewOrchestrator(diffSanitizer, fileChunkAnalyzer, globalAggregator);
+        orchestrator = new ReviewOrchestrator(diffSanitizer, fileChunkAnalyzer,
+                globalAggregator, eventPublisher);
     }
 
     private SanitizedDiff sampleDiff(String path) {
@@ -137,7 +142,7 @@ class ReviewOrchestratorTest {
         void shouldReturnErrorOnL2Timeout() {
             // 用测试构造函数注入 1ms 超时，避免等待 60s
             orchestrator = new ReviewOrchestrator(diffSanitizer, fileChunkAnalyzer,
-                    globalAggregator, 1, 30);
+                    globalAggregator, eventPublisher, 1, 30);
 
             when(diffSanitizer.sanitize(anyString()))
                     .thenReturn(List.of(sampleDiff("SlowFile.java")));
