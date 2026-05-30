@@ -143,16 +143,22 @@ public class GlobalAggregator {
                     GlobalReviewReport.CrossFileIssue.CrossFileIssueBuilder issueBuilder =
                             GlobalReviewReport.CrossFileIssue.builder();
 
-                    // issueType
+                    // issueType（AI 输出 + 后端兜底分类）
                     JsonNode typeNode = issueNode.get("issueType");
+                    GlobalReviewReport.IssueType resolvedType = GlobalReviewReport.IssueType.OTHER;
                     if (typeNode != null) {
                         try {
-                            issueBuilder.issueType(
-                                    GlobalReviewReport.IssueType.valueOf(typeNode.asText().toUpperCase()));
+                            resolvedType = GlobalReviewReport.IssueType.valueOf(
+                                    typeNode.asText().toUpperCase());
                         } catch (IllegalArgumentException e) {
-                            issueBuilder.issueType(GlobalReviewReport.IssueType.OTHER);
+                            // 忽略，由后端兜底
                         }
                     }
+                    if (resolvedType == GlobalReviewReport.IssueType.OTHER) {
+                        String desc = getTextOrDefault(issueNode, "description", "");
+                        resolvedType = classifyIssueType(desc);
+                    }
+                    issueBuilder.issueType(resolvedType);
 
                     issueBuilder.description(getTextOrDefault(issueNode, "description", ""));
                     issueBuilder.severity(getTextOrDefault(issueNode, "severity", "MEDIUM"));
@@ -199,6 +205,52 @@ public class GlobalAggregator {
         }
 
         return builder.build();
+    }
+
+    /**
+     * 通过关键词匹配自动分类 issueType（兜底 AI 的分类失败）
+     */
+    static GlobalReviewReport.IssueType classifyIssueType(String description) {
+        if (description == null || description.isBlank()) {
+            return GlobalReviewReport.IssueType.OTHER;
+        }
+        String lower = description.toLowerCase();
+
+        if (containsAny(lower, "精度", "浮点", "epsilon", "容差", "tolerance",
+                "舍入", "condition number", "数值稳定性")) {
+            return GlobalReviewReport.IssueType.NUMERICAL_ACCURACY;
+        }
+        if (containsAny(lower, "gram", "schmidt", "算法选型", "algorithm choice",
+                "householder", "qr分解", "最小二乘", "orthogonal")) {
+            return GlobalReviewReport.IssueType.ALGORITHM_CHOICE;
+        }
+        if (containsAny(lower, "性能", "performance", "拷贝", "分配", "内存",
+                "开销", "overhead", "复杂度")) {
+            return GlobalReviewReport.IssueType.PERFORMANCE;
+        }
+        if (containsAny(lower, "接口", "签名", "interface", "signature", "inconsistency")) {
+            return GlobalReviewReport.IssueType.INTERFACE_INCONSISTENCY;
+        }
+        if (containsAny(lower, "重复", "冗余", "duplicate", "redundant")) {
+            return GlobalReviewReport.IssueType.REPEAT_LOGIC;
+        }
+        if (containsAny(lower, "安全", "注入", "权限", "security", "injection", "vulnerability")) {
+            return GlobalReviewReport.IssueType.SECURITY_VULNERABILITY;
+        }
+        if (containsAny(lower, "事务", "transaction", "原子性", "一致性")) {
+            return GlobalReviewReport.IssueType.TRANSACTION_MISSING;
+        }
+        if (containsAny(lower, "mapper", "mybatis", "数据库", "字段", "column")) {
+            return GlobalReviewReport.IssueType.DB_CODE_INCONSISTENCY;
+        }
+        return GlobalReviewReport.IssueType.OTHER;
+    }
+
+    private static boolean containsAny(String text, String... keywords) {
+        for (String kw : keywords) {
+            if (text.contains(kw.toLowerCase())) return true;
+        }
+        return false;
     }
 
     private String getTextOrDefault(JsonNode node, String field, String defaultValue) {
