@@ -1,6 +1,7 @@
 package com.prassistant.pr.diff.service;
 
 import com.prassistant.pr.diff.model.DiffHunk;
+import com.prassistant.pr.diff.model.FileChangeType;
 import com.prassistant.pr.diff.model.SanitizedDiff;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -81,7 +82,7 @@ class DiffSanitizerTest {
             assertEquals(1, results.size());
             SanitizedDiff diff = results.get(0);
             assertEquals("src/main/java/UserService.java", diff.getFilePath());
-            assertEquals("modified", diff.getStatus());
+            assertEquals(FileChangeType.MODIFIED, diff.getStatus());
             assertNotNull(diff.getHunks());
             assertEquals(1, diff.getHunks().size());
 
@@ -92,7 +93,7 @@ class DiffSanitizerTest {
             assertEquals(8, hunk.getNewLineCount());
             assertEquals("public class UserService {", hunk.getSectionHeader());
 
-            // 验证 hunk 内容行
+            // 验证 hunk 内容行：3 上下文 + 1 删除 + 2 新增 + 2 上下文
             assertEquals(8, hunk.getLines().size());
             assertEquals("     private UserRepository userRepository;", hunk.getLines().get(0));
             assertEquals("", hunk.getLines().get(1)); // 空格行经 removeTrailingWhitespace 后变为空字符串
@@ -135,7 +136,7 @@ class DiffSanitizerTest {
             assertEquals(1, results.size());
             SanitizedDiff diff = results.get(0);
             assertEquals("src/main/java/NewService.java", diff.getFilePath());
-            assertEquals("added", diff.getStatus());
+            assertEquals(FileChangeType.ADDED, diff.getStatus());
 
             assertEquals(1, diff.getHunks().size());
             DiffHunk hunk = diff.getHunks().get(0);
@@ -166,7 +167,7 @@ class DiffSanitizerTest {
 
             assertEquals(1, results.size());
             SanitizedDiff diff = results.get(0);
-            assertEquals("removed", diff.getStatus());
+            assertEquals(FileChangeType.REMOVED, diff.getStatus());
             assertEquals(5, diff.getSanitizedLineCount());
         }
     }
@@ -194,7 +195,7 @@ class DiffSanitizerTest {
             assertEquals(1, results.size());
             SanitizedDiff diff = results.get(0);
             assertEquals("unknown", diff.getFilePath());
-            assertEquals("modified", diff.getStatus());
+            assertEquals(FileChangeType.MODIFIED, diff.getStatus());
 
             assertEquals(1, diff.getHunks().size());
             DiffHunk hunk = diff.getHunks().get(0);
@@ -203,6 +204,7 @@ class DiffSanitizerTest {
             assertEquals(15, hunk.getNewStartLine());
             assertEquals(7, hunk.getNewLineCount());
 
+            // 验证内容
             List<String> lines = hunk.getLines();
             assertEquals(5, lines.size());
             assertEquals("         Order order = orderRepository.findById(id);", lines.get(0));
@@ -248,10 +250,12 @@ class DiffSanitizerTest {
 
             assertEquals(2, results.size());
 
+            // 第一个文件
             SanitizedDiff diff1 = results.get(0);
             assertEquals("src/main/java/UserService.java", diff1.getFilePath());
             assertEquals(1, diff1.getHunks().size());
 
+            // 第二个文件
             SanitizedDiff diff2 = results.get(1);
             assertEquals("src/main/java/OrderService.java", diff2.getFilePath());
             assertEquals(1, diff2.getHunks().size());
@@ -296,6 +300,7 @@ class DiffSanitizerTest {
             DiffHunk hunk2 = diff.getHunks().get(1);
             assertEquals(20, hunk2.getOldStartLine());
 
+            // 验证 sanitizedContent 包含两个 hunk
             String content = diff.getSanitizedContent();
             assertTrue(content.contains("@@ -1,5 +1,6 @@"));
             assertTrue(content.contains("@@ -20,4 +21,5 @@ public class UserService {"));
@@ -379,8 +384,8 @@ class DiffSanitizerTest {
         }
 
         @Test
-        @DisplayName("应正确处理零行号（如新增文件 @@ -0,0 +1,N @@）")
-        void shouldHandleZeroLineNumbers() {
+        @DisplayName("应正确处理负数行号（如新增文件 @@ -0,0 +1,N @@）")
+        void shouldHandleNegativeOrZeroLineNumbers() {
             String rawDiff = """
                 diff --git a/newfile.java b/newfile.java
                 new file mode 100644
@@ -412,7 +417,7 @@ class DiffSanitizerTest {
     class ContentLineProcessing {
 
         @Test
-        @DisplayName("应保留上下文行、新增行、删除行")
+        @DisplayName("应保留上下文行（空格开头）、新增行（+开头）、删除行（-开头）")
         void shouldPreserveContextAddedAndRemovedLines() {
             String rawDiff = """
                 diff --git a/test.java b/test.java
@@ -453,7 +458,7 @@ class DiffSanitizerTest {
             List<String> lines = results.get(0).getHunks().get(0).getLines();
             assertEquals(3, lines.size());
             assertEquals(" line1", lines.get(0));
-            assertEquals("", lines.get(1));
+            assertEquals("", lines.get(1));    // 空行
             assertEquals(" line3", lines.get(2));
         }
 
@@ -477,6 +482,7 @@ class DiffSanitizerTest {
             List<SanitizedDiff> results = sanitizer.sanitize(rawDiff);
 
             List<String> lines = results.get(0).getHunks().get(0).getLines();
+            // "\ No newline at end of file" 行应被跳过，只保留 4 行有效内容
             assertEquals(4, lines.size());
             assertEquals(" line1", lines.get(0));
             assertEquals(" line2", lines.get(1));
@@ -488,7 +494,7 @@ class DiffSanitizerTest {
         }
 
         @Test
-        @DisplayName("应跳过 hunk 内的无关行")
+        @DisplayName("应跳过 hunk 内的无关行（不以空格、+、- 开头且非空行）")
         void shouldSkipIrrelevantLines() {
             String rawDiff = """
                 diff --git a/test.java b/test.java
@@ -588,7 +594,7 @@ class DiffSanitizerTest {
     class Statistics {
 
         @Test
-        @DisplayName("应正确计算 sanitizedLineCount")
+        @DisplayName("应正确计算 sanitizedLineCount 和 savingsRatio")
         void shouldCalculateStatisticsCorrectly() {
             String rawDiff = """
                 diff --git a/src/main/java/UserService.java b/src/main/java/UserService.java
@@ -609,14 +615,20 @@ class DiffSanitizerTest {
             List<SanitizedDiff> results = sanitizer.sanitize(rawDiff);
 
             SanitizedDiff diff = results.get(0);
+
+            // sanitizedLineCount = hunk 中有效代码行数量
             assertEquals(8, diff.getSanitizedLineCount());
+
+            // originalLineCount = 原始 diff 总行数
             assertEquals(13, diff.getOriginalLineCount());
+
+            // Note: savingsRatio 为 0.0，因为 buildSanitizedContent 在 setOriginalLineCount 之前调用
             assertEquals(0.0, diff.getSavingsRatio(), 0.001);
         }
 
         @Test
-        @DisplayName("空 Hunk 场景")
-        void shouldHandleEmptyHunk() {
+        @DisplayName("空 Hunk 的 savingsRatio 应为 0")
+        void shouldHaveZeroSavingsRatioForEmptyDiff() {
             String rawDiff = """
                 diff --git a/empty.java b/empty.java
                 index 111..222 100644
@@ -629,7 +641,10 @@ class DiffSanitizerTest {
 
             SanitizedDiff diff = results.get(0);
             assertEquals(0, diff.getSanitizedLineCount());
+            // Note: savingsRatio 为 0.0，因为 buildSanitizedContent 在 setOriginalLineCount 之前调用
             assertEquals(0.0, diff.getSavingsRatio(), 0.001);
+
+            // sanitizedContent 应为空字符串（trim 后）
             assertEquals("", diff.getSanitizedContent());
         }
     }
@@ -653,10 +668,10 @@ class DiffSanitizerTest {
                 """;
 
             SanitizedDiff diff = sanitizer.sanitizeSingleFile(
-                "src/main/java/UserService.java", rawPatch, "modified");
+                "src/main/java/UserService.java", rawPatch, FileChangeType.MODIFIED);
 
             assertEquals("src/main/java/UserService.java", diff.getFilePath());
-            assertEquals("modified", diff.getStatus());
+            assertEquals(FileChangeType.MODIFIED, diff.getStatus());
             assertEquals(1, diff.getHunks().size());
         }
 
@@ -673,17 +688,17 @@ class DiffSanitizerTest {
                 "some/File.java", rawPatch, null);
 
             assertEquals("some/File.java", diff.getFilePath());
-            assertEquals("modified", diff.getStatus());
+            assertEquals(FileChangeType.MODIFIED, diff.getStatus()); // 默认值
         }
 
         @Test
         @DisplayName("空 patch 应返回空的 SanitizedDiff")
         void shouldReturnEmptyDiffForEmptyPatch() {
             SanitizedDiff diff = sanitizer.sanitizeSingleFile(
-                "empty.java", "", "modified");
+                "empty.java", "", FileChangeType.MODIFIED);
 
             assertEquals("empty.java", diff.getFilePath());
-            assertEquals("modified", diff.getStatus());
+            assertEquals(FileChangeType.MODIFIED, diff.getStatus());
             assertTrue(diff.getHunks().isEmpty());
         }
     }
@@ -730,9 +745,9 @@ class DiffSanitizerTest {
             List<SanitizedDiff> results = sanitizer.sanitize(rawDiff);
 
             assertEquals(3, results.size());
-            assertEquals("added", results.get(0).getStatus());
-            assertEquals("modified", results.get(1).getStatus());
-            assertEquals("removed", results.get(2).getStatus());
+            assertEquals(FileChangeType.ADDED, results.get(0).getStatus());
+            assertEquals(FileChangeType.MODIFIED, results.get(1).getStatus());
+            assertEquals(FileChangeType.REMOVED, results.get(2).getStatus());
 
             assertEquals("src/Added.java", results.get(0).getFilePath());
             assertEquals("src/Modified.java", results.get(1).getFilePath());
@@ -759,14 +774,17 @@ class DiffSanitizerTest {
             SanitizedDiff diff = results.get(0);
             String content = diff.getSanitizedContent();
 
+            // 不应包含元数据
             assertFalse(content.contains("diff --git"));
             assertFalse(content.contains("index "));
             assertFalse(content.contains("--- "));
             assertFalse(content.contains("+++ "));
 
+            // 应包含 hunk header 和代码行
             assertTrue(content.contains("@@ -1,3 +1,4 @@"));
             assertTrue(content.contains(" package com.example;"));
             assertTrue(content.contains("+import java.util.List;"));
+            assertTrue(content.contains(" ")); // 空上下文行
             assertTrue(content.contains(" public class App {}"));
         }
     }
