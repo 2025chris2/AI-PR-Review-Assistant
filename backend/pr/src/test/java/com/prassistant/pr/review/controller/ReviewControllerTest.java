@@ -168,7 +168,7 @@ class ReviewControllerTest {
 
             when(gitHubApiClient.fetchAll(eq("octocat"), eq("hello-world"), eq(1), eq("token-abc")))
                     .thenReturn(prData);
-            when(orchestrator.review(anyString(), any()))
+            when(orchestrator.review(anyString(), any(), anyString()))
                     .thenReturn(GlobalReviewReport.builder()
                             .overallSummary("test")
                             .globalRiskLevel(GlobalReviewReport.RiskLevel.LOW)
@@ -185,7 +185,7 @@ class ReviewControllerTest {
                     .andExpect(jsonPath("$.resultUrl").isString());
 
             verify(gitHubApiClient).fetchAll("octocat", "hello-world", 1, "token-abc");
-            verify(orchestrator).review(anyString(), any());
+            verify(orchestrator).review(anyString(), any(), anyString());
         }
 
         @Test
