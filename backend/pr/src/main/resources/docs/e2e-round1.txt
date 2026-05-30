@@ -1,0 +1,219 @@
+============================================================
+E2E Test Report: Round1
+PRs: TheAlgorithms/Java#7427 & #7420
+Date: 2026-05-30 22:30
+Runs: 5 per PR
+============================================================
+
+============================================================
+PR #7427: feat(matrix): add QR decomposition algorithm using Gram-Schmidt process
+URL: https://github.com/TheAlgorithms/Java/pull/7427
+============================================================
+
+--- Macro Stats ---
+Success rate: 5/5
+Risk distribution: LOW=5 MEDIUM=0 HIGH=0
+Response time: avg=8021ms range=8019-8024ms
+
+--- Round 1 ---
+Summary: 新增QR分解实现及单元测试，使用Gram-Schmidt过程，代码质量良好但存在浮点数精度和性能问题。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，风险较低。但浮点数比较和性能问题需关注。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件中浮点数比较未使用容差，测试文件中未覆盖边界情况（如奇异矩阵），两者需协调。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (2):
+  - 考虑将getColumn和setColumn改为原地操作或使用矩阵视图，减少数组拷贝以提升性能。
+  - 统一浮点数比较策略，定义全局EPSILON常量。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 8024ms
+Error: None
+
+--- Round 2 ---
+Summary: 新增QR分解实现及单元测试，使用Gram-Schmidt过程，代码质量良好但存在精度和性能问题。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，测试覆盖基本功能，但浮点数比较和性能优化需改进。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件中浮点数比较使用精确相等，测试文件中使用容差比较，两者不一致可能导致测试通过但运行时异常。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (2):
+  - 将QR类的q和r字段设为final以增强不可变性。
+  - 优化列向量操作，避免频繁数组拷贝，提升性能。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 8020ms
+Error: None
+
+--- Round 3 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，代码质量良好，但存在浮点精度和性能问题。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，风险较低。但浮点比较和性能优化需关注。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件中浮点零值比较使用精确相等，测试文件中未覆盖边界情况（如接近零的向量），可能导致误判。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (2):
+  - 考虑将列提取和设置合并到主循环中，减少临时数组分配，提升性能。
+  - 测试中应使用assertEquals替代assertArrayEquals比较单个double值，提高可读性。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 8023ms
+Error: None
+
+--- Round 4 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，但存在封装性、异常信息、性能等问题。
+Risk Level: LOW
+Risk Reason: 功能独立，无跨文件依赖，风险较低，但存在封装性和异常处理细节问题。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件中的getQ和getR返回内部数组引用，破坏封装性，测试文件未验证不可变性。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (3):
+  - 考虑将QRDecomposition类设计为不可变，构造后Q和R不可修改。
+  - 异常信息应包含列索引以便调试。
+  - 性能敏感场景下可优化getColumn/setColumn的内存分配。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 8019ms
+Error: None
+
+--- Round 5 ---
+Summary: 新增QR分解实现及测试，使用Gram-Schmidt过程，但存在浮点误差处理和性能优化问题。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件依赖，但实现中浮点误差处理不完善，测试覆盖基本场景但缺少异常边界。
+Cross-File Issues (1):
+  type=OTHER sev=LOW
+  desc=测试文件直接使用私有辅助方法multiplyMatrices，未测试QRDecomposition类自身的矩阵乘法，若该类有公共乘法方法应复用。
+  files=['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Architecture Suggestions (2):
+  - 考虑将矩阵操作（如获取列、设置列）封装为内部方法，减少重复数组拷贝。
+  - 添加秩亏检测的容差常数，避免浮点误差导致异常。
+Top Files: ['src/main/java/com/thealgorithms/matrix/QRDecomposition.java', 'src/test/java/com/thealgorithms/matrix/QRDecompositionTest.java']
+Time: 8020ms
+Error: None
+
+============================================================
+Comparison Across 5 Runs
+============================================================
+
+Risk Level:
+  Round 1: LOW
+  Round 2: LOW
+  Round 3: LOW
+  Round 4: LOW
+  Round 5: LOW
+
+Cross-File Issues Count:
+  Round 1: 1
+  Round 2: 1
+  Round 3: 1
+  Round 4: 1
+  Round 5: 1
+
+Consistency:
+  Unique summaries: 5/5
+  Top files: CONSISTENT
+
+============================================================
+PR #7420: NeonNumber algorithm in maths package
+URL: https://github.com/TheAlgorithms/Java/pull/7420
+============================================================
+
+--- Macro Stats ---
+Success rate: 5/5
+Risk distribution: LOW=4 MEDIUM=1 HIGH=0
+Response time: avg=6016ms range=6014-6019ms
+
+--- Round 1 ---
+Summary: 新增NeonNumber算法实现及对应测试，但存在整数溢出和负数处理风险。
+Risk Level: MEDIUM
+Risk Reason: 实现中int平方可能溢出，且负数处理逻辑可能不符合预期，测试覆盖不足。
+Cross-File Issues (1):
+  type=OTHER sev=MEDIUM
+  desc=实现文件使用int计算平方，测试文件未覆盖大数边界，可能导致溢出错误未被发现。
+  files=['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Architecture Suggestions (2):
+  - 考虑将NeonNumber类设计为工具类，提供静态方法并处理负数输入。
+  - 统一数学算法模块的输入验证规范，如负数处理策略。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 6014ms
+Error: None
+
+--- Round 2 ---
+Summary: 新增NeonNumber算法实现及对应测试，代码简洁，但缺少负数和大数边界测试。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件交互，风险低；但测试覆盖不全面，存在边界情况未处理。
+Cross-File Issues (1):
+  type=OTHER sev=LOW
+  desc=实现文件对负数处理不明确，测试文件未覆盖负数和大数边界，可能导致行为不符合预期。
+  files=['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Architecture Suggestions (2):
+  - 考虑将NeonNumber类设计为工具类，使用静态方法，避免实例化。
+  - 可考虑添加输入验证，如非负整数检查。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 6016ms
+Error: None
+
+--- Round 3 ---
+Summary: 新增NeonNumber算法实现及对应测试，代码简洁，但测试覆盖不足，缺少负数和大数边界用例。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件交互，风险低；但测试覆盖不全面，存在轻微质量风险。
+Cross-File Issues (0):
+Architecture Suggestions (2):
+  - 考虑将NeonNumber类放入maths包，与现有算法结构一致，无架构影响。
+  - 建议统一负数处理策略，如返回false或抛出异常，并更新测试。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 6019ms
+Error: None
+
+--- Round 4 ---
+Summary: 新增NeonNumber算法实现及对应测试，变更简单，风险低。
+Risk Level: LOW
+Risk Reason: 变更仅涉及单个算法实现和测试，无跨文件交互，逻辑简单，测试覆盖基本功能。
+Cross-File Issues (0):
+Architecture Suggestions (2):
+  - 考虑将负数处理逻辑统一化，可在NeonNumber类中添加注释说明负数返回false。
+  - 建议增加负数、大数等边界测试用例，提高测试覆盖率。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 6017ms
+Error: None
+
+--- Round 5 ---
+Summary: 新增NeonNumber算法实现及对应测试，代码简洁，但缺少负数和大数边界测试。
+Risk Level: LOW
+Risk Reason: 变更独立，无跨文件交互，风险低；但测试覆盖不全面，存在边界情况未处理。
+Cross-File Issues (1):
+  type=OTHER sev=LOW
+  desc=实现文件与测试文件对应，但测试未覆盖负数和大数等边界条件，可能遗漏潜在问题。
+  files=['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Architecture Suggestions (2):
+  - 考虑将NeonNumber类设计为工具类，使用静态方法，避免实例化。
+  - 建议统一数学算法模块的命名和接口风格。
+Top Files: ['src/main/java/com/thealgorithms/maths/NeonNumber.java', 'src/test/java/com/thealgorithms/maths/NeonNumberTest.java']
+Time: 6017ms
+Error: None
+
+============================================================
+Comparison Across 5 Runs
+============================================================
+
+Risk Level:
+  Round 1: MEDIUM
+  Round 2: LOW
+  Round 3: LOW
+  Round 4: LOW
+  Round 5: LOW
+
+Cross-File Issues Count:
+  Round 1: 1
+  Round 2: 1
+  Round 3: 0
+  Round 4: 0
+  Round 5: 1
+
+Consistency:
+  Unique summaries: 4/5
+  Top files: CONSISTENT
+
+============================================================
+Report Complete
+============================================================
