@@ -158,6 +158,46 @@ public class ReviewController {
                 .body(new ReviewCreateResponse(taskId, eventsUrl, resultUrl));
     }
 
+    /**
+     * 发起 Review 分析（从 GitHub 自动拉取数据）
+     *
+     * <p>根据 owner/repo/prNumber 从 GitHub API 获取 PR 元数据和原始 diff，
+     * 然后异步执行分析。Token 按请求传入，不持久化。</p>
+     */
+    @PostMapping("/github")
+    public ResponseEntity<?> createReviewFromGithub(@RequestBody GitHubReviewRequest request) {
+        if (request.owner() == null || request.owner().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "owner is required"));
+        }
+        if (request.repo() == null || request.repo().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "repo is required"));
+        }
+        if (request.prNumber() <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "prNumber must be positive"));
+        }
+        if (request.token() == null || request.token().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "token is required"));
+        }
+
+        try {
+            GitHubPrData prData = gitHubApiClient.fetchAll(
+                    request.owner(), request.repo(), request.prNumber(), request.token());
+
+            String taskId = startAsyncAnalysis(prData.rawDiff(), prData.metadata());
+            return buildAcceptedResponse(taskId);
+
+        } catch (GitHubApiException e) {
+            log.warn("GitHub API error: {} (status={})", e.getMessage(), e.getStatusCode());
+            return ResponseEntity.status(mapGitHubStatus(e.getStatusCode()))
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** GitHub API 错误码 → HTTP 状态码映射 */
+    private int mapGitHubStatus(int gitHubStatusCode) {
+        return gitHubStatusCode > 0 ? gitHubStatusCode : HttpStatus.INTERNAL_SERVER_ERROR.value();
+    }
+
     private PrMetadata buildMetadata(ReviewRequest request) {
         return PrMetadata.builder()
                 .prUrl(request.prUrl())
