@@ -145,16 +145,28 @@ public class FileReportReducer {
 
     /**
      * 拼接各块摘要生成文件级总结
+     *
+     * <p>如果 AI 未使用模板格式，自动追加"变更 "前缀以保证格式统一。</p>
      */
     String buildOverallSummary(List<ChunkReviewResult> results) {
+        String raw;
         if (results.size() == 1) {
-            String summary = results.get(0).getSummary();
-            return summary != null ? summary : "";
+            raw = results.get(0).getSummary();
+        } else {
+            raw = results.stream()
+                .map(r -> r.getSummary() != null ? r.getSummary() : "")
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.joining("; "));
         }
-        // 多块：取每块的摘要前 20 字拼接
-        return results.stream()
-            .map(r -> r.getSummary() != null ? r.getSummary() : "")
-            .filter(s -> !s.isEmpty())
-            .collect(Collectors.joining("; "));
+        if (raw == null || raw.isBlank()) return "";
+
+        // AI 已使用模板格式则直接返回
+        if (raw.contains("影响") || raw.contains("本质")) {
+            return raw.length() > 80 ? raw.substring(0, 77) + "..." : raw;
+        }
+
+        // 否则加前缀
+        String trimmed = raw.length() > 50 ? raw.substring(0, 47) + "..." : raw;
+        return "变更 " + trimmed;
     }
 }
