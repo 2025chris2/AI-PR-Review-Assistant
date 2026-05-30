@@ -85,6 +85,18 @@ class ReviewEventPublisherTest {
             assertDoesNotThrow(() ->
                     publisher.publish(sampleEvent(ReviewEventType.L2_COMPLETE, "task-1")));
         }
+
+        @Test
+        @DisplayName("推送时使用 sseName 而非枚举名（不抛异常即为通过）")
+        void shouldUseSseNameForEventName() {
+            publisher.register("sse-task");
+
+            ReviewEvent event = ReviewEvent.stageEvent(
+                    ReviewEventType.L2_FILE_START, "sse-task", "start");
+
+            assertDoesNotThrow(() -> publisher.publish(event));
+            assertEquals("l2.file.start", event.getType().getSseName());
+        }
     }
 
     @Nested
@@ -114,9 +126,9 @@ class ReviewEventPublisherTest {
     class Timeout {
 
         @Test
-        @DisplayName("默认 SSE 超时应为 180 秒")
-        void defaultTimeoutShouldBe180Seconds() {
-            assertEquals(180_000L, ReviewEventPublisher.DEFAULT_SSE_TIMEOUT);
+        @DisplayName("默认 SSE 超时应为 360 秒（6 分钟）")
+        void defaultTimeoutShouldBe360Seconds() {
+            assertEquals(360_000L, ReviewEventPublisher.DEFAULT_SSE_TIMEOUT);
         }
     }
 }
