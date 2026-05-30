@@ -2,6 +2,9 @@ package com.prassistant.pr.review.controller;
 
 import com.prassistant.pr.aggregation.model.GlobalReviewReport;
 import com.prassistant.pr.aggregation.model.PrMetadata;
+import com.prassistant.pr.github.GitHubApiClient;
+import com.prassistant.pr.github.GitHubApiException;
+import com.prassistant.pr.github.GitHubPrData;
 import com.prassistant.pr.orchestrator.ReviewOrchestrator;
 import com.prassistant.pr.orchestrator.event.ReviewEvent;
 import com.prassistant.pr.orchestrator.event.ReviewEventPublisher;
@@ -32,6 +35,7 @@ public class ReviewController {
 
     private final ReviewOrchestrator orchestrator;
     private final ReviewEventPublisher eventPublisher;
+    private final GitHubApiClient gitHubApiClient;
     private final Executor executor;
 
     /** 临时结果缓存（生产环境应替换为 Redis / 数据库） */
@@ -39,21 +43,24 @@ public class ReviewController {
 
     @Autowired
     public ReviewController(ReviewOrchestrator orchestrator,
-                            ReviewEventPublisher eventPublisher) {
-        this(orchestrator, eventPublisher, ForkJoinPool.commonPool());
+                            ReviewEventPublisher eventPublisher,
+                            GitHubApiClient gitHubApiClient) {
+        this(orchestrator, eventPublisher, gitHubApiClient, ForkJoinPool.commonPool());
     }
 
     /** 测试专用 — 可注入自定义 Executor（如同步执行器） */
     ReviewController(ReviewOrchestrator orchestrator,
                      ReviewEventPublisher eventPublisher,
+                     GitHubApiClient gitHubApiClient,
                      Executor executor) {
         this.orchestrator = orchestrator;
         this.eventPublisher = eventPublisher;
+        this.gitHubApiClient = gitHubApiClient;
         this.executor = executor;
     }
 
     /**
-     * 发起 Review 分析
+     * 发起 Review 分析（手动传入 Raw Diff）
      *
      * <p>返回 202 Accepted 包含 taskId，分析在后台异步执行。
      * 前端可通过 {@link #streamEvents(String)} 连接 SSE 监听进度。</p>
@@ -65,6 +72,52 @@ public class ReviewController {
         }
 
         PrMetadata metadata = buildMetadata(request);
+        String taskId = startAsyncAnalysis(request.rawDiff(), metadata);
+
+        return buildAcceptedResponse(taskId);
+    }
+
+    /**
+     * 发起 Review 分析（从 GitHub 自动拉取数据）
+     *
+     * <p>根据 owner/repo/prNumber 从 GitHub API 获取 PR 元数据和原始 diff，
+     * 然后异步执行分析。Token 按请求传入，不持久化。</p>
+     */
+    @PostMapping("/github")
+    public ResponseEntity<?> createReviewFromGithub(@RequestBody GitHubReviewRequest request) {
+        if (request.owner() == null || request.owner().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "owner is required"));
+        }
+        if (request.repo() == null || request.repo().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "repo is required"));
+        }
+        if (request.prNumber() <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "prNumber must be positive"));
+        }
+        if (request.token() == null || request.token().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "token is required"));
+        }
+
+        try {
+            GitHubPrData prData = gitHubApiClient.fetchAll(
+                    request.owner(), request.repo(), request.prNumber(), request.token());
+
+            String taskId = startAsyncAnalysis(prData.rawDiff(), prData.metadata());
+            return buildAcceptedResponse(taskId);
+
+        } catch (GitHubApiException e) {
+            log.warn("GitHub API error: {} (status={})", e.getMessage(), e.getStatusCode());
+            return ResponseEntity.status(mapGitHubStatus(e.getStatusCode()))
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 异步执行分析 — 提取公共逻辑
+     *
+     * @return taskId
+     */
+    private String startAsyncAnalysis(String rawDiff, PrMetadata metadata) {
         String taskId = java.util.UUID.randomUUID().toString().substring(0, 8);
 
         // 推送任务创建事件
@@ -74,7 +127,7 @@ public class ReviewController {
         // 异步执行分析
         CompletableFuture.runAsync(() -> {
             try {
-                GlobalReviewReport report = orchestrator.review(request.rawDiff(), metadata);
+                GlobalReviewReport report = orchestrator.review(rawDiff, metadata);
                 // 补充 taskId（orchestrator 内部已设置，确保兜底）
                 if (report != null && report.getTaskId() == null) {
                     report.setTaskId(taskId);
@@ -94,11 +147,22 @@ public class ReviewController {
             }
         }, executor);
 
+        return taskId;
+    }
+
+    /** 构建 202 Accepted 响应 */
+    private ResponseEntity<ReviewCreateResponse> buildAcceptedResponse(String taskId) {
         String eventsUrl = "/api/v1/reviews/" + taskId + "/events";
         String resultUrl = "/api/v1/reviews/" + taskId + "/result";
 
         return ResponseEntity.accepted()
                 .body(new ReviewCreateResponse(taskId, eventsUrl, resultUrl));
+    }
+
+    /** GitHub API 错误码 → HTTP 状态码映射 */
+    private int mapGitHubStatus(int gitHubStatusCode) {
+        // GitHubApiException 的状态码直接对应 HTTP 状态
+        return gitHubStatusCode > 0 ? gitHubStatusCode : HttpStatus.INTERNAL_SERVER_ERROR.value();
     }
 
     /**
