@@ -1,0 +1,82 @@
+============================================================
+E2E Test Report: New PRs
+PRs: TheAlgorithms/Java#7426 & #7434
+Runs: 2 per PR
+============================================================
+
+============================================================
+PR #7426: feat(maths): add LU decomposition algorithm using Doolittle method
+URL: https://github.com/TheAlgorithms/Java/pull/7426
+============================================================
+
+--- Macro Stats ---
+Success rate: 2/2
+Risk: LOW=0 MEDIUM=2 HIGH=0
+Time: avg=9054ms
+
+--- Run 1 ---
+Summary: 新增Doolittle LU分解算法实现及测试，但浮点数比较缺乏容差，数值稳定性不足。
+Risk: MEDIUM
+Reason: 核心算法使用==0比较浮点数，可能导致零主元误判；测试覆盖基本功能但未验证数值稳定性边界。
+Cross-File Issues (1):
+  type=NUMERICAL_ACCURACY sev=HIGH
+  desc=实现文件使用==0判断零主元，测试文件未覆盖接近零的浮点数场景，可能导致数值不稳定。
+  files=['src/test/java/com/thealgorithms/maths/LUDecompositionTest.java', 'src/main/java/com/thealgorithms/maths/LUDecomposition.java']
+Suggestions (3):
+  - 在LUDecomposition.java中引入静态常量EPS=1e-12用于浮点数比较，避免直接==0。
+  - 考虑实现部分主元法（行交换）以提高数值稳定性，并记录置换矩阵。
+  - 在decompose方法中增加对矩阵元素NaN/Infinity的检查。
+Time: 10086ms
+
+--- Run 2 ---
+Summary: 新增Doolittle LU分解算法实现及测试，但缺少数值稳定性处理。
+Risk: MEDIUM
+Reason: 实现使用精确零比较可能导致浮点误差下误判，且未采用部分选主元，数值稳定性不足。测试覆盖基本场景但缺少零矩阵等边界用例。
+Cross-File Issues (1):
+  type=NUMERICAL_ACCURACY sev=MEDIUM
+  desc=实现文件使用精确等于0比较主元，测试文件未覆盖零矩阵等边界，可能导致浮点误差下误判或漏判。
+  files=['src/test/java/com/thealgorithms/maths/LUDecompositionTest.java', 'src/main/java/com/thealgorithms/maths/LUDecomposition.java']
+Suggestions (2):
+  - 在LUDecomposition.java中引入部分选主元（partial pivoting）以提高数值稳定性，避免零主元。
+  - 在LUDecomposition.java中将零主元检测改为与epsilon比较，如Math.abs(lu[k][k]) < 1e-12。
+Time: 8023ms
+
+============================================================
+PR #7434: feat: Add NearestElement stack algorithms and fix Javadoc build warnings
+URL: https://github.com/TheAlgorithms/Java/pull/7434
+============================================================
+
+--- Macro Stats ---
+Success rate: 2/2
+Risk: LOW=0 MEDIUM=2 HIGH=0
+Time: avg=8024ms
+
+--- Run 1 ---
+Summary: 新增单调栈算法类，修复Javadoc警告，但删除了两个搜索类的类注释。
+Risk: MEDIUM
+Reason: 主要变更集中在新增功能，但删除了类注释影响可维护性，且Stack性能可优化。
+Cross-File Issues (1):
+  type=OTHER sev=LOW
+  desc=删除了InterpolationSearch和LinearSearch的类注释，降低了代码可读性和文档完整性，但未影响功能。
+  files=['src/main/java/com/thealgorithms/searches/LinearSearch.java', 'src/main/java/com/thealgorithms/searches/InterpolationSearch.java']
+Suggestions (2):
+  - 将NearestElement.java中的Stack替换为ArrayDeque以提高性能，因为Stack是线程安全的但此处无需同步。
+  - 恢复InterpolationSearch.java和LinearSearch.java的类注释，以保持代码可维护性。
+Time: 8024ms
+
+--- Run 2 ---
+Summary: 新增单调栈算法实现最近元素查找，修复Javadoc警告，但删除了两个搜索类的类注释。
+Risk: MEDIUM
+Reason: 主要变更集中在新增模块，测试覆盖全面；但删除了类注释影响可维护性，风险较低。
+Cross-File Issues (1):
+  type=OTHER sev=LOW
+  desc=删除了InterpolationSearch和LinearSearch的类注释，降低了代码可读性和文档完整性，影响整体代码质量。
+  files=['src/main/java/com/thealgorithms/searches/LinearSearch.java', 'src/main/java/com/thealgorithms/searches/InterpolationSearch.java']
+Suggestions (2):
+  - 在NearestElement.java中，考虑使用ArrayDeque替代Stack以获得更好的性能，因为Stack是同步的。
+  - 建议为NearestElement类添加类注释，说明算法原理、时间/空间复杂度及使用场景。
+Time: 8024ms
+
+============================================================
+Report Complete
+============================================================
