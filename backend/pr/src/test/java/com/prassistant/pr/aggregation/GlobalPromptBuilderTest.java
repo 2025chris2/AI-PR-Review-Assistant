@@ -47,7 +47,8 @@ class GlobalPromptBuilderTest {
                 List.of(), sampleMetadata(), List.of());
 
             assertTrue(prompt.contains("资深的代码评审专家"));
-            assertTrue(prompt.contains("全局评审分析"));
+            assertTrue(prompt.contains("全局推理分析"));
+            assertTrue(prompt.contains("架构层面的影响"));
         }
 
         @Test
@@ -99,6 +100,17 @@ class GlobalPromptBuilderTest {
                 List.of(), sampleMetadata(), List.of());
 
             assertTrue(prompt.contains("未发现明显的跨文件关联"));
+        }
+
+        @Test
+        @DisplayName("应包含推理要求")
+        void shouldContainReasoningRules() {
+            String prompt = GlobalPromptBuilder.build(
+                List.of(), sampleMetadata(), List.of());
+
+            assertTrue(prompt.contains("推理要求"));
+            assertTrue(prompt.contains("至少两个文件"));
+            assertTrue(prompt.contains("不超过 3 个"));
         }
 
         @Test
