@@ -1,12 +1,10 @@
 spring:
   application:
     name: pr
-  profiles:
-    active: local
 
   ai:
     openai:
-      api-key: ${AI_API_KEY:placeholder}
+      api-key: ${sk-530f4b23943844f6a0e678c4640bbd50}
       base-url: https://api.deepseek.com
       chat:
         options:
@@ -15,7 +13,7 @@ spring:
 
 pr:
   review:
-    l2-timeout-seconds: 120
-    l3-timeout-seconds: 60
-    sse-timeout-ms: 360000
+    l2-timeout-seconds: 60
+    l3-timeout-seconds: 30
+    sse-timeout-ms: 180000
     max-concurrent-files: 5
