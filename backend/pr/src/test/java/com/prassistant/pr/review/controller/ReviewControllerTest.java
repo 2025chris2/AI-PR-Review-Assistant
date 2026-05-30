@@ -76,7 +76,7 @@ class ReviewControllerTest {
         @Test
         @DisplayName("有效请求应返回 202 和 taskId")
         void shouldReturn202WithTaskId() throws Exception {
-            when(orchestrator.review(anyString(), any()))
+            when(orchestrator.review(anyString(), any(), anyString()))
                     .thenReturn(GlobalReviewReport.builder()
                             .overallSummary("test")
                             .globalRiskLevel(GlobalReviewReport.RiskLevel.LOW)
@@ -90,8 +90,9 @@ class ReviewControllerTest {
                     .andExpect(jsonPath("$.eventsUrl").isString())
                     .andExpect(jsonPath("$.resultUrl").isString());
 
+            // TASK_STARTED (sync) + RESULT (async) = 2 publishes
             verify(eventPublisher, times(2)).publish(any());
-            verify(orchestrator).review(anyString(), any());
+            verify(orchestrator).review(anyString(), any(), anyString());
         }
 
         @Test
