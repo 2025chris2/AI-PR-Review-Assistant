@@ -12,6 +12,8 @@ spring:
         options:
           model: deepseek-chat
           temperature: 0.0
+          response-format:
+            type: json_object
 
 pr:
   review:

@@ -14,28 +14,43 @@ import java.util.List;
 public final class GlobalPromptBuilder {
 
     /** 系统角色设定 */
-    static final String SYSTEM_ROLE = "你是一位资深的代码评审专家。请对以下 Pull Request 进行全局评审分析。";
+    static final String SYSTEM_ROLE = """
+            你是一位资深的代码评审专家。请基于以下 Pull Request 的各文件分析摘要和跨文件线索，
+            进行全局推理分析。不要重复描述各文件摘要，而是聚焦于：
+            1. 跨文件交互可能引入的风险
+            2. 架构层面的影响（模块耦合、接口兼容性等）
+            3. 整体代码质量评估与改进建议
+            """;
+
+    /** 推理要求 */
+    static final String REASONING_RULES = """
+            【推理要求】
+            1. 仅基于提供的分析摘要和跨文件线索进行推理，不要自行推断未提供的信息
+            2. 如果无法确定某个风险，标注为 "需进一步确认"
+            3. crossFileIssues 必须涉及至少两个文件
+            4. topPriorityFiles 不超过 3 个
+            """;
 
     /** 全局输出格式要求 */
     static final String OUTPUT_FORMAT = """
-        请严格按以下 JSON 格式输出（不要包含 Markdown 代码块标记）：
-        {
-          "overallSummary": "PR 整体变更总结（80字内）",
-          "globalRiskLevel": "HIGH|MEDIUM|LOW",
-          "globalRiskReason": "全局风险评级理由",
-          "crossFileIssues": [
+            请严格按以下 JSON 格式输出（不要包含 Markdown 代码块标记）：
             {
-              "issueType": "INTERFACE_MISMATCH|DUPLICATE_LOGIC|TRANSACTION_MISSING|SECURITY_PROPAGATION|DB_CODE_INCONSISTENCY|OTHER",
-              "description": "问题描述",
-              "involvedFiles": ["文件路径1", "文件路径2"],
-              "severity": "HIGH|MEDIUM|LOW",
-              "suggestion": "修复建议"
+              "overallSummary": "PR 整体变更总结（80字内）",
+              "globalRiskLevel": "HIGH|MEDIUM|LOW",
+              "globalRiskReason": "全局风险评级理由",
+              "crossFileIssues": [
+                {
+                  "issueType": "INTERFACE_MISMATCH|DUPLICATE_LOGIC|TRANSACTION_MISSING|SECURITY_PROPAGATION|DB_CODE_INCONSISTENCY|OTHER",
+                  "description": "问题描述",
+                  "involvedFiles": ["文件路径1", "文件路径2"],
+                  "severity": "HIGH|MEDIUM|LOW",
+                  "suggestion": "修复建议"
+                }
+              ],
+              "architectureSuggestions": ["建议1", "建议2"],
+              "topPriorityFiles": ["最需要优先Review的文件路径"]
             }
-          ],
-          "architectureSuggestions": ["建议1", "建议2"],
-          "topPriorityFiles": ["最需要优先Review的文件路径"]
-        }
-        """;
+            """;
 
     private GlobalPromptBuilder() {
         // 工具类，禁止实例化
@@ -64,8 +79,11 @@ public final class GlobalPromptBuilder {
         // === 跨文件关联线索 ===
         appendCrossFileHints(sb, crossFileHints);
 
+        // === 推理要求 ===
+        sb.append(REASONING_RULES).append("\n");
+
         // === 输出格式要求 ===
-        sb.append("\n【输出格式】\n");
+        sb.append("【输出格式】\n");
         sb.append(OUTPUT_FORMAT);
 
         return sb.toString();
