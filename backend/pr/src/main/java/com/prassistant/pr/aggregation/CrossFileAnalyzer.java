@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,6 +53,21 @@ public final class CrossFileAnalyzer {
     private static final Pattern DB_FIELD_PATTERN = Pattern.compile(
             "新增(?:字段|列|属性)\\s*`?([a-z_][a-zA-Z0-9_]*)`?");
 
+    // 匹配矩阵运算关键词（数值稳定性检测用）
+    private static final Pattern MATRIX_PATTERN = Pattern.compile(
+            "\\b(matrix|decomposition|QR|SVD|eigen|norm|orthogonal|least.square|linear.algebra)\\b",
+            Pattern.CASE_INSENSITIVE);
+
+    // 匹配浮点直接比较模式
+    private static final Pattern NUMERICAL_COMPARE_PATTERN = Pattern.compile(
+            "(==\\s*0[^.]|==\\s*0\\.0|double\\[\\].*double\\[\\]|gram.schmidt|Gram.Schmidt)",
+            Pattern.CASE_INSENSITIVE);
+
+    // 匹配维度关键词
+    private static final Pattern DIMENSION_PATTERN = Pattern.compile(
+            "\\bm\\b.*\\bn\\b|column.*row|维度|非方阵|矩形矩阵",
+            Pattern.CASE_INSENSITIVE);
+
     /**
      * 从文件报告中提取跨文件关联线索
      *
@@ -79,6 +95,9 @@ public final class CrossFileAnalyzer {
 
         // 规则 5：架构层次一致性
         hints.addAll(detectArchitectureConsistency(fileReports));
+
+        // 规则 6：数值稳定性静态扫描
+        hints.addAll(detectNumericalIssues(fileReports));
 
         log.debug("CrossFileAnalyzer extracted {} hints from {} file reports", hints.size(), fileReports.size());
         return hints;
@@ -264,6 +283,56 @@ public final class CrossFileAnalyzer {
                     + "请检查各层之间的接口和数据流是否一致。");
         }
 
+        return hints;
+    }
+
+    /**
+     * 规则 6：数值稳定性静态扫描
+     *
+     * <p>通过正则扫描文件名和摘要，检测浮点比较、矩阵运算相关风险。</p>
+     */
+    static List<String> detectNumericalIssues(List<FileReviewReport> reports) {
+        List<String> hints = new ArrayList<>();
+        if (reports == null || reports.isEmpty()) return hints;
+
+        boolean hasMatrixOps = false;
+        boolean hasNumericalCompare = false;
+        boolean hasDimensionRisk = false;
+
+        for (FileReviewReport report : reports) {
+            String path = report.getFilePath();
+            String summary = report.getOverallSummary();
+
+            if (path != null && MATRIX_PATTERN.matcher(path).find()) {
+                hasMatrixOps = true;
+            }
+            if (summary == null) continue;
+
+            if (NUMERICAL_COMPARE_PATTERN.matcher(summary).find()) {
+                hasNumericalCompare = true;
+            }
+            if (DIMENSION_PATTERN.matcher(summary).find()
+                    || summary.contains("m < n") || summary.contains("列数")) {
+                hasDimensionRisk = true;
+            }
+        }
+
+        List<String> fileList = reports.stream()
+                .map(r -> r.getFilePath())
+                .filter(f -> f != null)
+                .collect(Collectors.toList());
+        String files = String.join(", ", fileList);
+
+        if (hasMatrixOps) {
+            if (hasNumericalCompare) {
+                hints.add("【数值稳定性】文件 [" + files + "] 涉及矩阵运算且存在浮点直接比较（== 0 / == 0.0）。"
+                        + "建议使用 epsilon 容差替代精确相等，并评估算法本身的数值稳定性。");
+            }
+            if (!hasDimensionRisk) {
+                hints.add("【维度边界】文件 [" + files + "] 涉及矩阵运算但未发现 m < n 前置校验。"
+                        + "建议检查矩阵分解前是否需要验证维度。");
+            }
+        }
         return hints;
     }
 
