@@ -1,5 +1,8 @@
-package com.prassistant.pr.diff;
+package com.prassistant.pr.diff.service;
 
+import com.prassistant.pr.diff.model.DiffHunk;
+import com.prassistant.pr.diff.model.ParseState;
+import com.prassistant.pr.diff.model.SanitizedDiff;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -9,12 +12,18 @@ import java.util.regex.Pattern;
 
 /**
  * 第一层：Diff 去噪引擎
- * 
- * 职责：
- * 1. 解析 GitHub 返回的原始 diff / patch 格式
- * 2. 删除元数据噪音（diff --git、index、---、+++ 等）
- * 3. 保留 @@ 行号锚点和有效代码行
- * 4. 提取 Hunk 边界，为第二层文件分块做准备
+ *
+ * <p>使用 {@link ParseState} 状态机逐行解析 GitHub 原始 diff / patch，
+ * 剔除元数据噪音，只保留 @@ 行号锚点和有效代码行。</p>
+ *
+ * <h3>状态机概览</h3>
+ * <pre>
+ *   BETWEEN_FILES  →  IN_FILE_HEADER  →  IN_HUNK_CONTENT
+ *        ↑                  │                   │
+ *        └── diff --git ────┘                   │
+ *                                               │
+ *                          ← ← ← diff --git ← ← ┘
+ * </pre>
  */
 @Service
 public class DiffSanitizer {
@@ -34,38 +43,32 @@ public class DiffSanitizer {
         }
 
         String[] lines = rawDiff.split("\n");
+        ParseState state = ParseState.BETWEEN_FILES;
         SanitizedDiff currentFile = null;
         DiffHunk currentHunk = null;
-        boolean inFileHeader = false;
 
         for (String line : lines) {
             String trimmed = line.trim();
 
-            // ========== 1. 新文件开始（diff --git） ==========
-            if (trimmed.startsWith("diff --git")) {
-                saveCurrentFile(results, currentFile, currentHunk);
-                currentFile = createFileFromDiffHeader(trimmed);
-                inFileHeader = true;
-                currentHunk = null;
-                continue;
-            }
-
-            // ========== 2. 单文件 patch（无 diff --git 头） ==========
-            if (currentFile == null) {
-                if (trimmed.startsWith("@@")) {
-                    // 直接以 @@ 开头，说明是单文件 patch
+            // ========== 状态：BETWEEN_FILES ==========
+            if (state == ParseState.BETWEEN_FILES) {
+                if (trimmed.startsWith("diff --git")) {
+                    currentFile = createFileFromDiffHeader(trimmed);
+                    state = ParseState.IN_FILE_HEADER;
+                } else if (trimmed.startsWith("@@")) {
+                    // 单文件 patch（无 diff --git 头），直接进入 hunk
                     currentFile = new SanitizedDiff();
                     currentFile.setFilePath("unknown");
                     currentFile.setStatus("modified");
-                    inFileHeader = false;
-                    // 不 continue，让同一行进入下方的 hunk 解析
-                } else {
-                    continue; // 跳过无关前缀
+                    state = ParseState.IN_HUNK_CONTENT;
+                    currentHunk = parseHunkHeader(trimmed);
                 }
+                // 其他行：跳过
+                continue;
             }
 
-            // ========== 3. 文件头阶段（跳过元数据） ==========
-            if (inFileHeader) {
+            // ========== 状态：IN_FILE_HEADER ==========
+            if (state == ParseState.IN_FILE_HEADER) {
                 if (trimmed.startsWith("index ")) {
                     continue;
                 }
@@ -83,32 +86,38 @@ public class DiffSanitizer {
                     }
                     continue;
                 }
-                // 遇到第一个 @@，文件头结束
                 if (trimmed.startsWith("@@")) {
-                    inFileHeader = false;
-                    // fall through 到下方 hunk 解析
-                } else {
+                    // 文件头结束，进入 hunk
+                    state = ParseState.IN_HUNK_CONTENT;
+                    currentHunk = parseHunkHeader(trimmed);
                     continue;
                 }
-            }
-
-            // ========== 4. Hunk 头解析 ==========
-            if (trimmed.startsWith("@@")) {
-                saveCurrentHunk(currentFile, currentHunk);
-                currentHunk = parseHunkHeader(trimmed);
+                // 其他元数据行：跳过
                 continue;
             }
 
-            // ========== 5. Hunk 内容行 ==========
-            if (currentHunk != null) {
-                // 有效内容行：空格开头（上下文）、+开头（新增）、-开头（删除）
-                // 空行也保留（某些 diff 中空行无前导空格）
-                if (line.startsWith(" ") || line.startsWith("+") || line.startsWith("-") || line.isEmpty()) {
-                    currentHunk.getLines().add(removeTrailingWhitespace(line));
-                }
-                // 跳过 "\ No newline at end of file"
-                else if (trimmed.startsWith("\\ No newline")) {
+            // ========== 状态：IN_HUNK_CONTENT ==========
+            if (state == ParseState.IN_HUNK_CONTENT) {
+                if (trimmed.startsWith("diff --git")) {
+                    // 新文件开始，保存当前文件
+                    saveCurrentFile(results, currentFile, currentHunk);
+                    currentFile = createFileFromDiffHeader(trimmed);
+                    currentHunk = null;
+                    state = ParseState.IN_FILE_HEADER;
                     continue;
+                }
+                if (trimmed.startsWith("@@")) {
+                    // 新 Hunk
+                    saveCurrentHunk(currentFile, currentHunk);
+                    currentHunk = parseHunkHeader(trimmed);
+                    continue;
+                }
+                if (currentHunk != null) {
+                    if (line.startsWith(" ") || line.startsWith("+") || line.startsWith("-") || line.isEmpty()) {
+                        currentHunk.getLines().add(removeTrailingWhitespace(line));
+                    } else if (trimmed.startsWith("\\ No newline")) {
+                        continue;
+                    }
                 }
             }
         }
@@ -133,7 +142,7 @@ public class DiffSanitizer {
         SanitizedDiff diff = sanitize(rawPatch).stream()
             .findFirst()
             .orElse(new SanitizedDiff());
-        
+
         diff.setFilePath(filename);
         if (status != null) {
             diff.setStatus(status);
@@ -197,7 +206,7 @@ public class DiffSanitizer {
 
     private void buildSanitizedContent(SanitizedDiff diff) {
         StringBuilder sb = new StringBuilder();
-        
+
         for (DiffHunk hunk : diff.getHunks()) {
             sb.append(String.format("@@ -%d,%d +%d,%d @@ %s%n",
                 hunk.getOldStartLine(),
@@ -206,7 +215,7 @@ public class DiffSanitizer {
                 hunk.getNewLineCount(),
                 hunk.getSectionHeader()
             ));
-            
+
             for (String line : hunk.getLines()) {
                 sb.append(line).append("\n");
             }
@@ -215,13 +224,13 @@ public class DiffSanitizer {
 
         String content = sb.toString().trim();
         diff.setSanitizedContent(content);
-        
+
         // 统计
         int codeLines = diff.getHunks().stream()
             .mapToInt(h -> h.getLines().size())
             .sum();
         diff.setSanitizedLineCount(codeLines);
-        
+
         if (diff.getOriginalLineCount() > 0) {
             diff.setSavingsRatio(1.0 - (double) codeLines / diff.getOriginalLineCount());
         }

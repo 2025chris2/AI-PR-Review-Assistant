@@ -1,4 +1,4 @@
-package com.prassistant.pr.diff;
+package com.prassistant.pr.diff.model;
 
 import org.junit.jupiter.api.Test;
 import java.util.List;
