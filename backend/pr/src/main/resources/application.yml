@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: pr
+  profiles:
+    active: local
+
+  ai:
+    openai:
+      api-key: ${AI_API_KEY:placeholder}
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.0
+
+pr:
+  review:
+    l2-timeout-seconds: 120
+    l3-timeout-seconds: 60
+    sse-timeout-ms: 360000
+    max-concurrent-files: 5
