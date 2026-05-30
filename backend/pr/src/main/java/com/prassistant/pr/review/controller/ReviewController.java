@@ -2,6 +2,9 @@ package com.prassistant.pr.review.controller;
 
 import com.prassistant.pr.aggregation.model.GlobalReviewReport;
 import com.prassistant.pr.aggregation.model.PrMetadata;
+import com.prassistant.pr.github.GitHubApiClient;
+import com.prassistant.pr.github.GitHubApiException;
+import com.prassistant.pr.github.GitHubPrData;
 import com.prassistant.pr.orchestrator.ReviewOrchestrator;
 import com.prassistant.pr.orchestrator.event.ReviewEvent;
 import com.prassistant.pr.orchestrator.event.ReviewEventPublisher;
@@ -35,6 +38,7 @@ public class ReviewController {
 
     private final ReviewOrchestrator orchestrator;
     private final ReviewEventPublisher eventPublisher;
+    private final GitHubApiClient gitHubApiClient;
     private final Executor executor;
 
     /** 临时结果缓存（生产环境应替换为 Redis / 数据库） */
@@ -42,21 +46,24 @@ public class ReviewController {
 
     @Autowired
     public ReviewController(ReviewOrchestrator orchestrator,
-                            ReviewEventPublisher eventPublisher) {
-        this(orchestrator, eventPublisher, ForkJoinPool.commonPool());
+                            ReviewEventPublisher eventPublisher,
+                            GitHubApiClient gitHubApiClient) {
+        this(orchestrator, eventPublisher, gitHubApiClient, ForkJoinPool.commonPool());
     }
 
     /** 测试专用 — 可注入自定义 Executor（如同步执行器） */
     ReviewController(ReviewOrchestrator orchestrator,
                      ReviewEventPublisher eventPublisher,
+                     GitHubApiClient gitHubApiClient,
                      Executor executor) {
         this.orchestrator = orchestrator;
         this.eventPublisher = eventPublisher;
+        this.gitHubApiClient = gitHubApiClient;
         this.executor = executor;
     }
 
     /**
-     * 发起 Review 分析
+     * 发起 Review 分析（手动传入 Raw Diff）
      *
      * <p>返回 202 Accepted 包含 taskId，分析在后台异步执行。
      * 分析期间 Orchestrator 通过 SSE 推送进度事件，完成后 Controller
