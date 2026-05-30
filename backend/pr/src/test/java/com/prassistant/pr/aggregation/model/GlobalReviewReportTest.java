@@ -98,14 +98,20 @@ class GlobalReviewReportTest {
     class IssueTypeEnum {
 
         @Test
-        @DisplayName("应包含六种问题类型")
-        void shouldHaveSixValues() {
-            assertEquals(6, GlobalReviewReport.IssueType.values().length);
+        @DisplayName("应包含 12 种问题类型（含新增的数值精度、算法选型、性能等）")
+        void shouldHaveTwelveValues() {
+            assertEquals(12, GlobalReviewReport.IssueType.values().length);
             assertNotNull(GlobalReviewReport.IssueType.valueOf("INTERFACE_MISMATCH"));
+            assertNotNull(GlobalReviewReport.IssueType.valueOf("INTERFACE_INCONSISTENCY"));
             assertNotNull(GlobalReviewReport.IssueType.valueOf("DUPLICATE_LOGIC"));
+            assertNotNull(GlobalReviewReport.IssueType.valueOf("REPEAT_LOGIC"));
             assertNotNull(GlobalReviewReport.IssueType.valueOf("TRANSACTION_MISSING"));
             assertNotNull(GlobalReviewReport.IssueType.valueOf("SECURITY_PROPAGATION"));
+            assertNotNull(GlobalReviewReport.IssueType.valueOf("SECURITY_VULNERABILITY"));
             assertNotNull(GlobalReviewReport.IssueType.valueOf("DB_CODE_INCONSISTENCY"));
+            assertNotNull(GlobalReviewReport.IssueType.valueOf("NUMERICAL_ACCURACY"));
+            assertNotNull(GlobalReviewReport.IssueType.valueOf("ALGORITHM_CHOICE"));
+            assertNotNull(GlobalReviewReport.IssueType.valueOf("PERFORMANCE"));
             assertNotNull(GlobalReviewReport.IssueType.valueOf("OTHER"));
         }
     }

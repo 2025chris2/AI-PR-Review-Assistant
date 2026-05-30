@@ -129,6 +129,8 @@ class GlobalPromptBuilderTest {
             assertTrue(prompt.contains("topPriorityFiles"));
             assertTrue(prompt.contains("NUMERICAL_ACCURACY"));
             assertTrue(prompt.contains("ALGORITHM_CHOICE"));
+            assertTrue(prompt.contains("INTERFACE_MISMATCH"));
+            assertTrue(prompt.contains("DUPLICATE_LOGIC"));
         }
     }
 

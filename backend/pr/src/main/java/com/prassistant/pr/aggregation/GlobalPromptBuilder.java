@@ -43,7 +43,7 @@ public final class GlobalPromptBuilder {
               "globalRiskReason": "全局风险评级理由",
               "crossFileIssues": [
                 {
-                  "issueType": "INTERFACE_INCONSISTENCY|REPEAT_LOGIC|TRANSACTION_MISSING|NUMERICAL_ACCURACY|ALGORITHM_CHOICE|PERFORMANCE|SECURITY_VULNERABILITY|OTHER",
+                  "issueType": "INTERFACE_MISMATCH|INTERFACE_INCONSISTENCY|DUPLICATE_LOGIC|REPEAT_LOGIC|TRANSACTION_MISSING|SECURITY_PROPAGATION|SECURITY_VULNERABILITY|DB_CODE_INCONSISTENCY|NUMERICAL_ACCURACY|ALGORITHM_CHOICE|PERFORMANCE|OTHER",
                   "description": "问题描述",
                   "involvedFiles": ["文件路径1", "文件路径2"],
                   "severity": "HIGH|MEDIUM|LOW",
