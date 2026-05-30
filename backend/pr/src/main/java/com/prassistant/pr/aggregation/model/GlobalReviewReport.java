@@ -63,13 +63,19 @@ public class GlobalReviewReport {
         HIGH, MEDIUM, LOW
     }
 
-    /** 跨文件关联问题类型枚举 */
+    /** 跨文件关联问题类型枚举（与提示词 issueType 枚举一致） */
     public enum IssueType {
         INTERFACE_MISMATCH,
+        INTERFACE_INCONSISTENCY,
         DUPLICATE_LOGIC,
+        REPEAT_LOGIC,
         TRANSACTION_MISSING,
         SECURITY_PROPAGATION,
+        SECURITY_VULNERABILITY,
         DB_CODE_INCONSISTENCY,
+        NUMERICAL_ACCURACY,
+        ALGORITHM_CHOICE,
+        PERFORMANCE,
         OTHER
     }
 

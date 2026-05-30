@@ -17,9 +17,10 @@ public final class GlobalPromptBuilder {
     static final String SYSTEM_ROLE = """
             你是一位资深的代码评审专家。请基于以下 Pull Request 的各文件分析摘要和跨文件线索，
             进行全局推理分析。不要重复描述各文件摘要，而是聚焦于：
-            1. 跨文件交互可能引入的风险
+            1. 跨文件交互可能引入的风险（接口变更、数据流影响）
             2. 架构层面的影响（模块耦合、接口兼容性等）
-            3. 整体代码质量评估与改进建议
+            3. 实现与测试的对应性：测试是否覆盖了关键路径和边界条件
+            4. 整体代码质量评估与改进建议
             """;
 
     /** 推理要求 */
@@ -29,6 +30,8 @@ public final class GlobalPromptBuilder {
             2. 如果无法确定某个风险，标注为 "需进一步确认"
             3. crossFileIssues 必须涉及至少两个文件
             4. topPriorityFiles 不超过 3 个
+            5. 注意检查实现文件与测试文件的对应：有实现变更但无测试补充时，应标注测试缺失风险
+            6. architectureSuggestions 必须针对本次 PR 已变更的具体代码给出改进，每条建议应关联到具体文件路径，禁止建议"引入第三方库全面替换"等超出本次变更范围的重构
             """;
 
     /** 全局输出格式要求 */
@@ -40,7 +43,7 @@ public final class GlobalPromptBuilder {
               "globalRiskReason": "全局风险评级理由",
               "crossFileIssues": [
                 {
-                  "issueType": "INTERFACE_MISMATCH|DUPLICATE_LOGIC|TRANSACTION_MISSING|SECURITY_PROPAGATION|DB_CODE_INCONSISTENCY|OTHER",
+                  "issueType": "INTERFACE_MISMATCH|INTERFACE_INCONSISTENCY|DUPLICATE_LOGIC|REPEAT_LOGIC|TRANSACTION_MISSING|SECURITY_PROPAGATION|SECURITY_VULNERABILITY|DB_CODE_INCONSISTENCY|NUMERICAL_ACCURACY|ALGORITHM_CHOICE|PERFORMANCE|OTHER",
                   "description": "问题描述",
                   "involvedFiles": ["文件路径1", "文件路径2"],
                   "severity": "HIGH|MEDIUM|LOW",
