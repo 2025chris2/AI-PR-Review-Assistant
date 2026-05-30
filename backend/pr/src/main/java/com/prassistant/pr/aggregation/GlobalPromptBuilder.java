@@ -31,6 +31,7 @@ public final class GlobalPromptBuilder {
             3. crossFileIssues 必须涉及至少两个文件
             4. topPriorityFiles 不超过 3 个
             5. 注意检查实现文件与测试文件的对应：有实现变更但无测试补充时，应标注测试缺失风险
+            6. architectureSuggestions 必须针对本次 PR 已变更的具体代码给出改进，每条建议应关联到具体文件路径，禁止建议"引入第三方库全面替换"等超出本次变更范围的重构
             """;
 
     /** 全局输出格式要求 */
@@ -42,7 +43,7 @@ public final class GlobalPromptBuilder {
               "globalRiskReason": "全局风险评级理由",
               "crossFileIssues": [
                 {
-                  "issueType": "INTERFACE_MISMATCH|DUPLICATE_LOGIC|TRANSACTION_MISSING|SECURITY_PROPAGATION|DB_CODE_INCONSISTENCY|OTHER",
+                  "issueType": "INTERFACE_INCONSISTENCY|REPEAT_LOGIC|TRANSACTION_MISSING|NUMERICAL_ACCURACY|ALGORITHM_CHOICE|PERFORMANCE|SECURITY_VULNERABILITY|OTHER",
                   "description": "问题描述",
                   "involvedFiles": ["文件路径1", "文件路径2"],
                   "severity": "HIGH|MEDIUM|LOW",

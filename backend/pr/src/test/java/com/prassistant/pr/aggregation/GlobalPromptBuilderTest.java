@@ -113,6 +113,7 @@ class GlobalPromptBuilderTest {
             assertTrue(prompt.contains("至少两个文件"));
             assertTrue(prompt.contains("不超过 3 个"));
             assertTrue(prompt.contains("测试缺失风险"));
+            assertTrue(prompt.contains("architectureSuggestions 必须针对本次 PR"));
         }
 
         @Test
@@ -126,6 +127,8 @@ class GlobalPromptBuilderTest {
             assertTrue(prompt.contains("crossFileIssues"));
             assertTrue(prompt.contains("architectureSuggestions"));
             assertTrue(prompt.contains("topPriorityFiles"));
+            assertTrue(prompt.contains("NUMERICAL_ACCURACY"));
+            assertTrue(prompt.contains("ALGORITHM_CHOICE"));
         }
     }
 

@@ -153,7 +153,7 @@ class ChunkPromptBuilderTest {
         }
 
         @Test
-        @DisplayName("应包含跨块依赖提示（第 5 项）")
+        @DisplayName("应包含跨块依赖提示（第 6 项）")
         void shouldIncludeCrossChunkHint() {
             Chunk chunk = Chunk.builder()
                 .chunkId("test#hunk-1")
@@ -165,7 +165,7 @@ class ChunkPromptBuilderTest {
             String prompt = ChunkPromptBuilder.buildChunk(chunk);
 
             assertTrue(prompt.contains("跨块依赖提示"));
-            assertTrue(prompt.contains("5."));
+            assertTrue(prompt.contains("6."));
         }
 
         @Test
@@ -222,6 +222,8 @@ class ChunkPromptBuilderTest {
 
             assertFalse(wholeFilePrompt.contains("跨块依赖提示"));
             assertTrue(chunkPrompt.contains("跨块依赖提示"));
+            assertTrue(chunkPrompt.contains("5. 矩阵维度边界检查"));
+            assertTrue(chunkPrompt.contains("6. 跨块依赖提示"));
         }
 
         @Test
