@@ -90,6 +90,14 @@ public class DiffSanitizer {
                     currentHunk = DiffParser.parseHunkHeader(trimmed);
                     continue;
                 }
+                if (trimmed.startsWith("diff --git")) {
+                    // 纯元数据文件（如 rename、mode change，无 @@ hunk），保存并开始新文件
+                    saveCurrentFile(results, currentFile, currentHunk);
+                    currentFile = new SanitizedDiff();
+                    currentFile.setFilePath(DiffParser.extractPathFromDiffGitHeader(trimmed));
+                    currentHunk = null;
+                    continue;
+                }
                 // 其他元数据行：跳过
                 continue;
             }
