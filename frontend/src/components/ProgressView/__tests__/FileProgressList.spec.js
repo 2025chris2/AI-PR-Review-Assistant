@@ -35,4 +35,22 @@ describe('FileProgressList', () => {
     const items = wrapper.findAll('.rounded-md')
     expect(items).toHaveLength(2)
   })
+
+  it('shows chunk count for analyzing files', () => {
+    const files = [{ path: 'a.java', status: 'analyzing', chunksDone: 3 }]
+    const wrapper = mount(FileProgressList, { props: { files } })
+    expect(wrapper.text()).toContain('3 chunks')
+  })
+
+  it('hides chunk count when chunksDone is 0', () => {
+    const files = [{ path: 'a.java', status: 'analyzing', chunksDone: 0 }]
+    const wrapper = mount(FileProgressList, { props: { files } })
+    expect(wrapper.text()).not.toContain('chunks')
+  })
+
+  it('hides chunk count for completed files', () => {
+    const files = [{ path: 'a.java', status: 'complete', chunksDone: 5 }]
+    const wrapper = mount(FileProgressList, { props: { files } })
+    expect(wrapper.text()).not.toContain('chunks')
+  })
 })
