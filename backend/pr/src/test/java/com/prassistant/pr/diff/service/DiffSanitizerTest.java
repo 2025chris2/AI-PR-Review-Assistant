@@ -110,8 +110,8 @@ class DiffSanitizerTest {
             assertTrue(diff.getSanitizedContent().contains("-        return userRepository.findOne(id);"));
             assertEquals(8, diff.getSanitizedLineCount());
             assertEquals(13, diff.getOriginalLineCount());
-            // Note: savingsRatio is 0.0 because buildSanitizedContent runs before setOriginalLineCount
-            assertEquals(0.0, diff.getSavingsRatio());
+            // 13 original lines → 8 sanitized code lines
+            assertEquals(0.3846, diff.getSavingsRatio(), 0.001);
         }
 
         @Test
@@ -619,16 +619,16 @@ class DiffSanitizerTest {
             // sanitizedLineCount = hunk 中有效代码行数量
             assertEquals(8, diff.getSanitizedLineCount());
 
-            // originalLineCount = 原始 diff 总行数
+            // originalLineCount = 该文件在原始 diff 中的行数
             assertEquals(13, diff.getOriginalLineCount());
 
-            // Note: savingsRatio 为 0.0，因为 buildSanitizedContent 在 setOriginalLineCount 之前调用
-            assertEquals(0.0, diff.getSavingsRatio(), 0.001);
+            // 13 行原始内容 → 8 行有效代码，savingsRatio = 1 - 8/13
+            assertEquals(0.3846, diff.getSavingsRatio(), 0.001);
         }
 
         @Test
-        @DisplayName("空 Hunk 的 savingsRatio 应为 0")
-        void shouldHaveZeroSavingsRatioForEmptyDiff() {
+        @DisplayName("空 Hunk 的 savingsRatio 应为 1.0（全部为元数据行）")
+        void shouldHaveFullSavingsRatioForEmptyDiff() {
             String rawDiff = """
                 diff --git a/empty.java b/empty.java
                 index 111..222 100644
@@ -641,8 +641,9 @@ class DiffSanitizerTest {
 
             SanitizedDiff diff = results.get(0);
             assertEquals(0, diff.getSanitizedLineCount());
-            // Note: savingsRatio 为 0.0，因为 buildSanitizedContent 在 setOriginalLineCount 之前调用
-            assertEquals(0.0, diff.getSavingsRatio(), 0.001);
+            // 5 行元数据，0 行有效代码 → savingsRatio = 1 - 0/5 = 1.0
+            assertEquals(5, diff.getOriginalLineCount());
+            assertEquals(1.0, diff.getSavingsRatio(), 0.001);
 
             // sanitizedContent 应为空字符串（trim 后）
             assertEquals("", diff.getSanitizedContent());
