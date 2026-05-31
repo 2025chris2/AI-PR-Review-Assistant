@@ -31,14 +31,16 @@
 
 | 依赖 | 版本 | 用途 |
 |------|------|------|
-| Spring Boot | 3.5.14 | 应用框架 |
+| Spring Boot (Parent BOM) | 3.5.14 | 应用框架，依赖管理与自动配置 |
+| spring-boot-starter | — | 核心 Starter，含 Logback 日志 |
 | spring-boot-starter-web | — | REST API 与嵌入式 Tomcat |
 | Spring AI (spring-ai-starter-model-openai) | 1.1.7 | AI API 抽象层，兼容 OpenAI 接口 |
 | Lombok | 1.18.34 | 编译期注解，减少样板代码 |
 | jtokkit | 1.1.0 | Token 计数，用于 AI 提示词长度估算 |
 | DeepSeek API (deepseek-chat) | — | 外部 AI 服务提供方 |
 | Java | 21 | 运行环境 |
-| Maven | — | 构建工具 |
+| spring-boot-starter-test | — | 测试框架 (JUnit 5 + Mockito + AssertJ) |
+| Maven | 3.9.16 (via Wrapper) | 构建工具 |
 
 ### 前端 (Vue 3 / Vite)
 
