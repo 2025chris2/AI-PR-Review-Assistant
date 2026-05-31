@@ -14,7 +14,7 @@ class ReviewEventPublisherTest {
 
     @BeforeEach
     void setUp() {
-        publisher = new ReviewEventPublisher();
+        publisher = new ReviewEventPublisher(360_000L);
     }
 
     private ReviewEvent sampleEvent(ReviewEventType type, String taskId) {

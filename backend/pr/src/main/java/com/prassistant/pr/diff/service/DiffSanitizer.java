@@ -43,6 +43,7 @@ public class DiffSanitizer {
         ParseState state = ParseState.BETWEEN_FILES;
         SanitizedDiff currentFile = null;
         DiffHunk currentHunk = null;
+        int fileLineCount = 0;
 
         for (String line : lines) {
             String trimmed = line.trim();
@@ -52,18 +53,22 @@ public class DiffSanitizer {
                 if (trimmed.startsWith("diff --git")) {
                     currentFile = new SanitizedDiff();
                     currentFile.setFilePath(DiffParser.extractPathFromDiffGitHeader(trimmed));
+                    fileLineCount = 1;
                     state = ParseState.IN_FILE_HEADER;
                 } else if (trimmed.startsWith("@@")) {
                     // 单文件 patch（无 diff --git 头），直接进入 hunk
                     currentFile = new SanitizedDiff();
                     currentFile.setFilePath("unknown");
                     currentFile.setStatus(FileChangeType.MODIFIED);
+                    fileLineCount = 1;
                     state = ParseState.IN_HUNK_CONTENT;
                     currentHunk = DiffParser.parseHunkHeader(trimmed);
                 }
                 // 其他行：跳过
                 continue;
             }
+
+            fileLineCount++;
 
             // ========== 状态：IN_FILE_HEADER ==========
             if (state == ParseState.IN_FILE_HEADER) {
@@ -90,6 +95,14 @@ public class DiffSanitizer {
                     currentHunk = DiffParser.parseHunkHeader(trimmed);
                     continue;
                 }
+                if (trimmed.startsWith("diff --git")) {
+                    // 纯元数据文件（如 rename、mode change，无 @@ hunk），保存并开始新文件
+                    saveCurrentFile(results, currentFile, currentHunk);
+                    currentFile = new SanitizedDiff();
+                    currentFile.setFilePath(DiffParser.extractPathFromDiffGitHeader(trimmed));
+                    currentHunk = null;
+                    continue;
+                }
                 // 其他元数据行：跳过
                 continue;
             }
@@ -98,10 +111,12 @@ public class DiffSanitizer {
             if (state == ParseState.IN_HUNK_CONTENT) {
                 if (trimmed.startsWith("diff --git")) {
                     // 新文件开始，保存当前文件
+                    currentFile.setOriginalLineCount(fileLineCount);
                     saveCurrentFile(results, currentFile, currentHunk);
                     currentFile = new SanitizedDiff();
                     currentFile.setFilePath(DiffParser.extractPathFromDiffGitHeader(trimmed));
                     currentHunk = null;
+                    fileLineCount = 1;
                     state = ParseState.IN_FILE_HEADER;
                     continue;
                 }
@@ -123,12 +138,14 @@ public class DiffSanitizer {
         }
 
         // 收尾最后一个文件
+        if (currentFile != null) {
+            currentFile.setOriginalLineCount(fileLineCount);
+        }
         saveCurrentFile(results, currentFile, currentHunk);
 
-        // 构建 sanitizedContent 和统计
+        // 构建 sanitizedContent
         for (SanitizedDiff diff : results) {
             buildSanitizedContent(diff);
-            diff.setOriginalLineCount(lines.length);
         }
 
         return results;

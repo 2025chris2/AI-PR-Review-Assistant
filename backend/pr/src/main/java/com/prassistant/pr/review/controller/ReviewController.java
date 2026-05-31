@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -43,8 +42,42 @@ public class ReviewController {
     private final GitHubApiClient gitHubApiClient;
     private final Executor executor;
 
-    /** 临时结果缓存（生产环境应替换为 Redis / 数据库） */
-    private final Map<String, GlobalReviewReport> resultCache = new ConcurrentHashMap<>();
+    /** 临时结果缓存（TTL 30 分钟，由 cleanup 线程定期驱逐） */
+    private final Map<String, CacheEntry> resultCache = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService cacheCleanup = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "cache-cleanup");
+        t.setDaemon(true);
+        return t;
+    });
+
+    static final long CACHE_TTL_MINUTES = 30;
+    static final long CLEANUP_INTERVAL_MINUTES = 5;
+
+    @PostConstruct
+    void startCacheCleanup() {
+        cacheCleanup.scheduleAtFixedRate(this::evictExpiredEntries,
+                CLEANUP_INTERVAL_MINUTES, CLEANUP_INTERVAL_MINUTES, TimeUnit.MINUTES);
+    }
+
+    @PreDestroy
+    void stopCacheCleanup() {
+        cacheCleanup.shutdownNow();
+    }
+
+    void evictExpiredEntries() {
+        long now = System.currentTimeMillis();
+        resultCache.values().removeIf(entry -> now - entry.createdAt > TimeUnit.MINUTES.toMillis(CACHE_TTL_MINUTES));
+    }
+
+    private static class CacheEntry {
+        final GlobalReviewReport report;
+        final long createdAt;
+
+        CacheEntry(GlobalReviewReport report) {
+            this.report = report;
+            this.createdAt = System.currentTimeMillis();
+        }
+    }
 
     /** 异步任务专用线程池，避免占用 ForkJoinPool.commonPool() */
     private final java.util.concurrent.ExecutorService taskExecutor;
@@ -112,9 +145,9 @@ public class ReviewController {
      */
     @GetMapping("/{taskId}/result")
     public ResponseEntity<?> getResult(@PathVariable String taskId) {
-        GlobalReviewReport report = resultCache.get(taskId);
-        if (report != null) {
-            return ResponseEntity.ok(report);
+        CacheEntry entry = resultCache.get(taskId);
+        if (entry != null) {
+            return ResponseEntity.ok(entry.report);
         }
         return ResponseEntity.accepted()
                 .body(Map.of("taskId", taskId, "status", "PENDING"));
@@ -144,7 +177,7 @@ public class ReviewController {
                     report.setTaskId(taskId);
                 }
                 if (report != null) {
-                    resultCache.put(taskId, report);
+                    resultCache.put(taskId, new CacheEntry(report));
                 }
 
                 // 推送 result 事件

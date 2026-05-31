@@ -46,7 +46,7 @@ class ReviewOrchestratorTest {
     @BeforeEach
     void setUp() {
         orchestrator = new ReviewOrchestrator(diffSanitizer, fileChunkAnalyzer,
-                globalAggregator, eventPublisher);
+                globalAggregator, eventPublisher, 60, 30);
     }
 
     private SanitizedDiff sampleDiff(String path) {
