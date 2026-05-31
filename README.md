@@ -457,3 +457,27 @@ EVENT_TYPES:
 | jsdom | 29.1.1 | 测试用 DOM 模拟环境 |
 | vite-plugin-vue-devtools | 8.1.1 | Vue DevTools 集成 |
 | Node.js | ^20.19.0 \|\| >=22.12.0 | 运行环境 |
+
+## 原创功能说明
+
+### 后端
+
+| 模块 | 说明 |
+|------|------|
+| **三层分析流水线** | 设计并实现了完整的 L1→L2→L3 架构：L1 状态机驱散去噪、L2 自适应 Token 分块 Map/Reduce、L3 全局规则引擎+AI聚合，非对任何开源评审工具的封装 |
+| **DiffSanitizer 状态机** | 设计并实现了 ParseState 三态解析器（BETWEEN_FILES→IN_FILE_HEADER→IN_HUNK_CONTENT），独立解析 git diff 去除元数据噪音 |
+| **CrossFileAnalyzer 规则引擎** | 设计并实现了6条本地规则（接口-实现一致性、DB-代码一致性、重复逻辑检测、事务边界、架构分层、数值稳定性），不依赖第三方静态分析工具 |
+| **ChunkPromptBuilder** | 设计并实现了两阶段 Prompt 模板（整文件/分块），含角色设定、风险评级硬性规则、反幻觉约束 |
+| **SSE 实时进度系统** | 设计并实现了基于 Spring SseEmitter + Virtual Threads 的管道事件推送，支持按 taskId 多客户端并发连接 |
+
+### 前端
+
+| 模块 | 说明 |
+|------|------|
+| **useReview 状态机** | 设计并实现了组合式状态管理（input→progress→result），SSE+轮询双通道兜底机制 |
+| **ResultView 三Tab布局** | 设计并实现了文件建议详情 / 跨文件问题 / 架构建议 三面板切换 |
+| **全流程 UI 组件** | 设计并实现了 InputView、ProgressView（三级管道进度）、ResultView 共计 13 个 Vue 组件 |
+
+### 使用的第三方技术
+
+Spring Boot、Spring AI、Lombok、jtokkit、Vue 3、Vite、Tailwind CSS、Vitest — 作为底层框架和工具链，详见上方依赖项章节。AI 能力通过 DeepSeek API 调用，本项目原创部分在于全套流水线编排、Prompt 工程与分析逻辑。
