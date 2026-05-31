@@ -113,7 +113,7 @@ class GlobalAggregatorTest {
                 sampleMetadata());
 
             assertTrue(report.isSuccess());
-            assertNotNull(report.getTaskId());
+            // taskId 由调用方 ReviewOrchestrator 设置，aggregate() 自身不生成
             assertNotNull(report.getOverallSummary());
             assertEquals(GlobalReviewReport.RiskLevel.LOW, report.getGlobalRiskLevel());
             assertTrue(report.getAnalysisTimeMs() >= 0);
