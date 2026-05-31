@@ -15,7 +15,7 @@ async function postJson(url, payload) {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.message || err.error || `Request failed (${res.status})`)
     }
-    return res.json()
+    return res.json().catch(() => ({}))
   } finally {
     clearTimeout(timer)
   }
@@ -43,7 +43,7 @@ export async function fetchResult(resultUrl) {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.message || err.error || `Failed to fetch result (${res.status})`)
     }
-    return res.json()
+    return res.json().catch(() => null)
   } finally {
     clearTimeout(timer)
   }

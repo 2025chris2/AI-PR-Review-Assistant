@@ -83,6 +83,28 @@ describe('fetchResult', () => {
   })
 })
 
+describe('empty response body handling', () => {
+  it('createReview handles empty 2xx body gracefully', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+    })
+    const result = await createReview({ rawDiff: 'test' })
+    expect(result).toEqual({})
+  })
+
+  it('fetchResult handles empty 200 body gracefully', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+    })
+    const result = await fetchResult('/some/url')
+    expect(result).toBeNull()
+  })
+})
+
 describe('request timeout', () => {
   it('POST functions include AbortController signal', async () => {
     mockFetch.mockResolvedValue(mockResponse(202, { taskId: 't' }))
