@@ -18,7 +18,7 @@ class FunctionBasedChunkSplitterTest {
 
     @BeforeEach
     void setUp() {
-        splitter = new FunctionBasedChunkSplitter();
+        splitter = new FunctionBasedChunkSplitter(new HunkBasedChunkSplitter());
     }
 
     @Nested
