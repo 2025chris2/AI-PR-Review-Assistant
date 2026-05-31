@@ -39,7 +39,7 @@ function handleSubmit() {
       <label class="block text-sm font-medium text-slate-700 mb-1.5">Git Diff</label>
       <textarea
         v-model="rawDiff"
-        rows="12"
+        rows="6"
         placeholder="Paste the output of `git diff` or a unified diff here...&#10;&#10;Or paste a GitHub PR URL like:&#10;https://github.com/owner/repo/pull/123"
         class="w-full px-3 py-2.5 text-sm font-mono border border-slate-300 rounded-lg
                placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
