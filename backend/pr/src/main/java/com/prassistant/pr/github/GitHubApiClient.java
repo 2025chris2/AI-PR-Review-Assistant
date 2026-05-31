@@ -171,7 +171,7 @@ public class GitHubApiClient {
         String url = "/repos/{owner}/{repo}/pulls/{number}";
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
+        setAuthIfPresent(headers, token);
         headers.setAccept(List.of(MediaType.parseMediaType(DIFF_MEDIA_TYPE)));
 
         ResponseEntity<String> response;
@@ -194,11 +194,12 @@ public class GitHubApiClient {
     /**
      * 通用的 JSON GET 请求
      *
-     * <p>设置 Bearer Token 认证头，执行 GET 请求，将 JSON 响应体解析为 {@link JsonNode}。</p>
+     * <p>当 token 不为空时设置 Bearer Token 认证头，否则以匿名方式请求。
+     * 公开仓库无需 token。</p>
      */
     private JsonNode getForJson(String urlTemplate, String token, String... uriVars) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
+        setAuthIfPresent(headers, token);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
         ResponseEntity<String> response;
@@ -221,6 +222,13 @@ public class GitHubApiClient {
             return objectMapper.readTree(body);
         } catch (Exception e) {
             throw new GitHubApiException("Failed to parse GitHub API response: " + e.getMessage(), e);
+        }
+    }
+
+    /** 当 token 不为空时设置 Bearer 认证头 */
+    private static void setAuthIfPresent(HttpHeaders headers, String token) {
+        if (token != null && !token.isBlank()) {
+            headers.setBearerAuth(token);
         }
     }
 
