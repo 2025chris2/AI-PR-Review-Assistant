@@ -18,11 +18,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import jakarta.annotation.PreDestroy;
+
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Executors;
 
 /**
  * Review REST API — 触发分析、SSE 推送进度、查询结果
@@ -44,11 +46,15 @@ public class ReviewController {
     /** 临时结果缓存（生产环境应替换为 Redis / 数据库） */
     private final Map<String, GlobalReviewReport> resultCache = new ConcurrentHashMap<>();
 
+    /** 异步任务专用线程池，避免占用 ForkJoinPool.commonPool() */
+    private final java.util.concurrent.ExecutorService taskExecutor;
+
     @Autowired
     public ReviewController(ReviewOrchestrator orchestrator,
                             ReviewEventPublisher eventPublisher,
                             GitHubApiClient gitHubApiClient) {
-        this(orchestrator, eventPublisher, gitHubApiClient, ForkJoinPool.commonPool());
+        this(orchestrator, eventPublisher, gitHubApiClient,
+                Executors.newVirtualThreadPerTaskExecutor());
     }
 
     /** 测试专用 — 可注入自定义 Executor（如同步执行器） */
@@ -60,6 +66,14 @@ public class ReviewController {
         this.eventPublisher = eventPublisher;
         this.gitHubApiClient = gitHubApiClient;
         this.executor = executor;
+        this.taskExecutor = executor instanceof java.util.concurrent.ExecutorService es ? es : null;
+    }
+
+    @PreDestroy
+    void shutdownExecutor() {
+        if (taskExecutor != null) {
+            taskExecutor.shutdownNow();
+        }
     }
 
     /**
