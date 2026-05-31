@@ -40,7 +40,7 @@
 | DeepSeek API (deepseek-chat) | — | 外部 AI 服务提供方 |
 | Java | 21 | 运行环境 |
 | spring-boot-starter-test | — | 测试框架 (JUnit 5 + Mockito + AssertJ) |
-| Maven | 3.9.16 (via Wrapper) | 构建工具 |
+| Maven | 3.9.16  | 构建工具 |
 
 ### 前端 (Vue 3 / Vite)
 
