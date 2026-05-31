@@ -8,7 +8,6 @@ import com.prassistant.pr.review.model.ChunkReviewResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -35,13 +34,12 @@ public class ChunkAnalyzer {
     }
 
     /**
-     * 异步分析单个 Chunk
+     * 分析单个 Chunk
      *
      * @param prompt 由 {@link ChunkPromptBuilder} 构建的完整 Prompt
      * @param chunkId Chunk 标识（用于日志关联）
-     * @return 异步返回结构化分析结果
+     * @return 结构化分析结果
      */
-    @Async
     public CompletableFuture<ChunkReviewResult> analyze(String prompt, String chunkId) {
         try {
             log.debug("Analyzing chunk: {}", chunkId);
