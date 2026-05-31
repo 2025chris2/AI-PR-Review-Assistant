@@ -1,11 +1,7 @@
 <script setup>
-defineProps({
-  stageTab: { type: Number, default: 1 },
-  taskId: { type: String, default: '' },
-  appState: { type: String, default: 'input' },
-})
+import { inject } from 'vue'
 
-const emit = defineEmits(['tab-change'])
+const review = inject('review')
 
 const labels = ['输入', '分析', '结果']
 const stepNames = ['一', '二', '三']
@@ -27,18 +23,18 @@ const stepNames = ['一', '二', '三']
         <div class="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
           <button v-for="(label, idx) in labels" :key="idx"
             type="button"
-            @click="emit('tab-change', idx + 1)"
+            @click="review.stageTab.value = idx + 1"
             class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
-            :class="stageTab === idx + 1
+            :class="review.stageTab.value === idx + 1
               ? 'bg-white text-slate-900 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'">
             第{{ stepNames[idx] }}步
           </button>
         </div>
-        <div v-if="taskId && appState !== 'input'" class="flex items-center gap-2 ml-1">
-          <span class="text-xs text-slate-400 font-mono">#{{ taskId }}</span>
+        <div v-if="review.taskId.value && review.appState.value !== 'input'" class="flex items-center gap-2 ml-1">
+          <span class="text-xs text-slate-400 font-mono">#{{ review.taskId.value }}</span>
           <span class="w-1.5 h-1.5 rounded-full"
-            :class="appState === 'progress' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'" />
+            :class="review.appState.value === 'progress' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'" />
         </div>
       </div>
     </div>

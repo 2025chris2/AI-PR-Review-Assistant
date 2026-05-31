@@ -1,10 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { inject } from 'vue'
 import InputMethodToggle from './InputMethodToggle.vue'
 import RawDiffForm from './RawDiffForm.vue'
 import GitHubForm from './GitHubForm.vue'
 
-const inputMode = ref('raw')
+const review = inject('review')
 </script>
 
 <template>
@@ -16,10 +16,18 @@ const inputMode = ref('raw')
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <InputMethodToggle v-model="inputMode" />
+        <InputMethodToggle v-model="review.inputMode.value" />
 
-        <RawDiffForm v-if="inputMode === 'raw'" />
-        <GitHubForm v-else />
+        <RawDiffForm v-if="review.inputMode.value === 'raw'" :loading="review.appState.value === 'progress'"
+          @submit="(data) => {
+            if (data.isPrUrl) {
+              review.submitByUrl({ url: data.rawDiff.trim() })
+            } else {
+              review.submitRawDiff({ rawDiff: data.rawDiff })
+            }
+          }" />
+        <GitHubForm v-else :loading="review.appState.value === 'progress'"
+          @submit="review.submitGitHub" />
       </div>
     </div>
   </div>

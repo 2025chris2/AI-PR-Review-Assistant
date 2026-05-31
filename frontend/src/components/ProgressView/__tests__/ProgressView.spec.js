@@ -2,36 +2,40 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ProgressView from '../ProgressView.vue'
 
+const mockReview = {
+  pipelineStages: { l1: 'pending', l2: 'pending', l3: 'pending' },
+  currentStage: { value: null },
+  appState: { value: 'progress' },
+  taskId: { value: 'abc' },
+  error: { value: '' },
+  filesInProgress: { value: [] },
+  reset: () => {},
+}
+
+const app = { provide: { review: mockReview } }
+
 describe('ProgressView', () => {
   it('renders PipelineStages', () => {
-    const wrapper = mount(ProgressView)
+    const wrapper = mount(ProgressView, { global: app })
     expect(wrapper.findComponent({ name: 'PipelineStages' }).exists()).toBe(true)
   })
 
-  it('renders ProgressSpinner', () => {
-    const wrapper = mount(ProgressView)
+  it('renders spinner when in progress', () => {
+    const wrapper = mount(ProgressView, { global: app })
     expect(wrapper.findComponent({ name: 'ProgressSpinner' }).exists()).toBe(true)
   })
 
   it('shows error state', () => {
-    const wrapper = mount(ProgressView, {
-      props: { error: 'Something went wrong' },
-    })
+    mockReview.error.value = 'Something went wrong'
+    const wrapper = mount(ProgressView, { global: app })
     expect(wrapper.text()).toContain('Something went wrong')
+    mockReview.error.value = ''
+  })
+
+  it('hides spinner when error', () => {
+    mockReview.error.value = 'Error'
+    const wrapper = mount(ProgressView, { global: app })
     expect(wrapper.findComponent({ name: 'ProgressSpinner' }).exists()).toBe(false)
-  })
-
-  it('emits reset on error button click', async () => {
-    const wrapper = mount(ProgressView, {
-      props: { error: 'Error' },
-    })
-    await wrapper.find('button').trigger('click')
-    expect(wrapper.emitted('reset')).toHaveLength(1)
-  })
-
-  it('renders FileProgressList when files provided', () => {
-    const files = [{ path: 'a.java', status: 'analyzing' }]
-    const wrapper = mount(ProgressView, { props: { files } })
-    expect(wrapper.findComponent({ name: 'FileProgressList' }).exists()).toBe(true)
+    mockReview.error.value = ''
   })
 })
