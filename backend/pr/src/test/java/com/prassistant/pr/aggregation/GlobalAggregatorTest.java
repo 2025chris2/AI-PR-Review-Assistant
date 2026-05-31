@@ -160,9 +160,8 @@ class GlobalAggregatorTest {
                 """;
 
             var reports = List.of(sampleReport("OrderService.java", "test"));
-            GlobalReviewReport report = aggregator.parseResponse(json, "task-001", reports);
+            GlobalReviewReport report = aggregator.parseResponse(json, reports);
 
-            assertEquals("task-001", report.getTaskId());
             assertEquals("修复订单并发扣减问题", report.getOverallSummary());
             assertEquals(GlobalReviewReport.RiskLevel.HIGH, report.getGlobalRiskLevel());
             assertEquals("涉及支付流程，并发控制不足", report.getGlobalRiskReason());
@@ -181,7 +180,7 @@ class GlobalAggregatorTest {
         void shouldReturnErrorForInvalidJson() {
             var reports = List.of(sampleReport("Test.java", "test"));
             GlobalReviewReport report = aggregator.parseResponse(
-                "not valid json", "task-001", reports);
+                "not valid json", reports);
 
             assertFalse(report.isSuccess());
         }
@@ -191,7 +190,7 @@ class GlobalAggregatorTest {
         void shouldHandleEmptyJson() {
             var reports = List.of(sampleReport("Test.java", "test"));
             GlobalReviewReport report = aggregator.parseResponse(
-                "{}", "task-001", reports);
+                "{}", reports);
 
             assertNotNull(report.getOverallSummary());
             assertNull(report.getGlobalRiskLevel());
@@ -204,7 +203,7 @@ class GlobalAggregatorTest {
                 { "globalRiskLevel": "INVALID", "overallSummary": "test" }
                 """;
             var reports = List.of(sampleReport("Test.java", "test"));
-            GlobalReviewReport report = aggregator.parseResponse(json, "t1", reports);
+            GlobalReviewReport report = aggregator.parseResponse(json, reports);
 
             assertEquals(GlobalReviewReport.RiskLevel.LOW, report.getGlobalRiskLevel());
         }

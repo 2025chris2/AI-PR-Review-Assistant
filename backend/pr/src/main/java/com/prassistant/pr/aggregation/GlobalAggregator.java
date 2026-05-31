@@ -15,7 +15,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 第三层门面 — 全局聚合入口
@@ -57,8 +56,7 @@ public class GlobalAggregator {
             return buildErrorReport("无变更文件，跳过全局分析");
         }
 
-        String taskId = UUID.randomUUID().toString().substring(0, 8);
-        log.info("Starting L3 aggregation task={}, files={}", taskId, fileReports.size());
+        log.info("Starting L3 aggregation files={}", fileReports.size());
 
         try {
             // Step 1: 跨文件线索提取
@@ -70,19 +68,19 @@ public class GlobalAggregator {
             log.debug("L3 prompt assembled ({} chars)", prompt.length());
 
             // Step 3: 单次 AI 调用
-            log.info("Calling AI for global aggregation task={}", taskId);
+            log.info("Calling AI for global aggregation");
             String response = chatClient.prompt()
                     .user(prompt)
                     .call()
                     .content();
 
             if (response == null || response.isBlank()) {
-                log.warn("AI returned empty response for global aggregation task={}", taskId);
+                log.warn("AI returned empty response for global aggregation");
                 return buildErrorReport("全局聚合 AI 返回空响应");
             }
 
-            // Step 4: 解析 AI 响应
-            GlobalReviewReport rawReport = parseResponse(response, taskId, fileReports);
+            // Step 4: 解析 AI 响应（taskId 由调用方 ReviewOrchestrator 设置）
+            GlobalReviewReport rawReport = parseResponse(response, fileReports);
 
             // Step 5: 后处理与标准化
             GlobalReviewReport finalReport = RiskPrioritizer.prioritize(rawReport);
@@ -90,16 +88,14 @@ public class GlobalAggregator {
             // Step 6: 补充元数据
             long elapsed = Duration.between(start, Instant.now()).toMillis();
             finalReport.setAnalysisTimeMs(elapsed);
-            finalReport.setTaskId(taskId);
 
-            log.info("L3 aggregation complete task={}, risk={}, time={}ms",
-                    taskId, finalReport.getGlobalRiskLevel(), elapsed);
+            log.info("L3 aggregation complete risk={}, time={}ms",
+                    finalReport.getGlobalRiskLevel(), elapsed);
             return finalReport;
 
         } catch (Exception e) {
-            log.error("Global aggregation failed task={}: {}", taskId, e.getMessage());
+            log.error("Global aggregation failed: {}", e.getMessage());
             GlobalReviewReport errorReport = buildErrorReport("全局聚合失败: " + e.getMessage());
-            errorReport.setTaskId(taskId);
             errorReport.setAnalysisTimeMs(Duration.between(start, Instant.now()).toMillis());
             return errorReport;
         }
@@ -108,9 +104,8 @@ public class GlobalAggregator {
     /**
      * 解析 AI 返回的 JSON 为 GlobalReviewReport
      */
-    GlobalReviewReport parseResponse(String json, String taskId, List<FileReviewReport> fileReports) {
+    GlobalReviewReport parseResponse(String json, List<FileReviewReport> fileReports) {
         GlobalReviewReport.GlobalReviewReportBuilder builder = GlobalReviewReport.builder()
-                .taskId(taskId)
                 .fileReports(fileReports);
 
         try {
