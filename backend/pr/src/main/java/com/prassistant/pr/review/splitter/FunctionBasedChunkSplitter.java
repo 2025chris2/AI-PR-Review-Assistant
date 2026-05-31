@@ -20,6 +20,12 @@ import java.util.regex.Pattern;
 @Component
 public class FunctionBasedChunkSplitter implements ChunkSplitter {
 
+    private final HunkBasedChunkSplitter hunkSplitter;
+
+    public FunctionBasedChunkSplitter(HunkBasedChunkSplitter hunkSplitter) {
+        this.hunkSplitter = hunkSplitter;
+    }
+
     /**
      * Java 方法签名匹配：访问修饰符 + 返回类型 + 方法名 + 参数列表
      * 如 {@code public void doSomething(}、{@code private String getName(}
@@ -86,7 +92,6 @@ public class FunctionBasedChunkSplitter implements ChunkSplitter {
     @Override
     public List<Chunk> split(SanitizedDiff diff) {
         // 先尝试按 Hunk 分组，再对超长块按函数拆分
-        HunkBasedChunkSplitter hunkSplitter = new HunkBasedChunkSplitter();
         List<Chunk> hunkChunks = hunkSplitter.split(diff);
 
         List<Chunk> result = new ArrayList<>();
