@@ -193,6 +193,45 @@ public class ReviewController {
         }
     }
 
+    /**
+     * 发起 Review 分析（通过 GitHub PR URL 自动拉取数据）
+     *
+     * <p>解析 GitHub PR URL，自动提取 owner/repo/prNumber，然后从 GitHub API
+     * 获取 PR 元数据和原始 diff 并分析。Token 可选，公开仓库不需要。</p>
+     */
+    @PostMapping("/by-url")
+    public ResponseEntity<?> createReviewByUrl(@RequestBody ByUrlReviewRequest request) {
+        if (request.url() == null || request.url().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "url is required"));
+        }
+
+        var matcher = PR_URL_PATTERN.matcher(request.url().strip());
+        if (!matcher.matches()) {
+            return ResponseEntity.badRequest().body(Map.of("error",
+                    "Invalid GitHub PR URL. Expected: https://github.com/owner/repo/pull/123"));
+        }
+
+        String owner = matcher.group(1);
+        String repo = matcher.group(2);
+        int prNumber = Integer.parseInt(matcher.group(3));
+
+        try {
+            GitHubPrData prData = gitHubApiClient.fetchAll(owner, repo, prNumber, request.token());
+
+            String taskId = startAsyncAnalysis(prData.rawDiff(), prData.metadata());
+            return buildAcceptedResponse(taskId);
+
+        } catch (GitHubApiException e) {
+            log.warn("GitHub API error: {} (status={})", e.getMessage(), e.getStatusCode());
+            return ResponseEntity.status(mapGitHubStatus(e.getStatusCode()))
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    private static final java.util.regex.Pattern PR_URL_PATTERN =
+            java.util.regex.Pattern.compile(
+                    "^(?:https?://)?github\\.com/([^/]+)/([^/]+)/pull/(\\d+)(?:/.*)?$");
+
     /** GitHub API 错误码 → HTTP 状态码映射 */
     private int mapGitHubStatus(int gitHubStatusCode) {
         return gitHubStatusCode > 0 ? gitHubStatusCode : HttpStatus.INTERNAL_SERVER_ERROR.value();
