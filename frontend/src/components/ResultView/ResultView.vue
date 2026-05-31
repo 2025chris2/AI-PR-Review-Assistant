@@ -51,19 +51,18 @@ const statusAbbr = { ADDED: 'A', MODIFIED: 'M', REMOVED: 'D', RENAMED: 'R' }
 <template>
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
     <ResultSummary
-      v-if="r"
-      :overall-summary="r.overallSummary"
-      :pr-url="r.prUrl"
-      :global-risk-reason="r.globalRiskReason"
-      :risk-level="r.globalRiskLevel"
+      :overall-summary="r?.overallSummary || ''"
+      :pr-url="r?.prUrl || ''"
+      :global-risk-reason="r?.globalRiskReason || ''"
+      :risk-level="r?.globalRiskLevel || ''"
       @new-review="review.reset()"
     />
 
-    <div v-if="r && r.error" class="bg-red-50 border border-red-200 rounded-xl p-4">
+    <div v-if="r?.error" class="bg-red-50 border border-red-200 rounded-xl p-4">
       <p class="text-sm text-red-700">{{ r.error }}</p>
     </div>
 
-    <div v-if="r && !r.error" class="flex flex-col md:flex-row gap-4">
+    <div class="flex flex-col md:flex-row gap-4">
       <div class="w-full md:w-1/4 shrink-0">
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div class="px-3 py-2.5 border-b border-slate-100 flex items-center gap-2">
@@ -105,64 +104,69 @@ const statusAbbr = { ADDED: 'A', MODIFIED: 'M', REMOVED: 'D', RENAMED: 'R' }
           </button>
         </div>
 
-        <div v-if="rightTab === 'file' && selectedFile" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex-1 overflow-auto">
-          <div class="flex items-start justify-between gap-3 mb-3">
-            <div class="min-w-0">
-              <h3 class="text-sm font-semibold text-slate-900 font-mono truncate">{{ selectedFile.filePath }}</h3>
-              <p v-if="selectedFile.overallSummary" class="text-xs text-slate-500 mt-0.5">{{ selectedFile.overallSummary }}</p>
+        <div v-if="rightTab === 'file'">
+          <div v-if="selectedFile" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex-1 overflow-auto">
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div class="min-w-0">
+                <h3 class="text-sm font-semibold text-slate-900 font-mono truncate">{{ selectedFile.filePath }}</h3>
+                <p v-if="selectedFile.overallSummary" class="text-xs text-slate-500 mt-0.5">{{ selectedFile.overallSummary }}</p>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <span v-if="selectedFile.status"
+                  class="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                  :class="statusColors[selectedFile.status] || defaultStatus">
+                  {{ selectedFile.status }}
+                </span>
+                <RiskBadge v-if="selectedFile.riskLevel" :level="selectedFile.riskLevel" size="sm" />
+              </div>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <span v-if="selectedFile.status"
-                class="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                :class="statusColors[selectedFile.status] || defaultStatus">
-                {{ selectedFile.status }}
-              </span>
-              <RiskBadge v-if="selectedFile.riskLevel" :level="selectedFile.riskLevel" size="sm" />
+
+            <div v-if="selectedFile.error" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">
+              {{ selectedFile.error }}
             </div>
-          </div>
 
-          <div v-if="selectedFile.error" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">
-            {{ selectedFile.error }}
-          </div>
-
-          <div v-else class="space-y-3">
-            <div v-if="selectedFile.risks?.length">
-              <h4 class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">风险</h4>
-              <div class="space-y-1">
-                <div v-for="(risk, i) in selectedFile.risks" :key="i" class="flex items-start gap-2 text-sm py-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0" />
-                  <div>
-                    <span class="text-[10px] font-mono text-slate-400" v-if="risk.line">L{{ risk.line }}</span>
-                    <span class="text-slate-700"> {{ risk.description }}</span>
+            <div v-else class="space-y-3">
+              <div v-if="selectedFile.risks?.length">
+                <h4 class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">风险</h4>
+                <div class="space-y-1">
+                  <div v-for="(risk, i) in selectedFile.risks" :key="i" class="flex items-start gap-2 text-sm py-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0" />
+                    <div>
+                      <span class="text-[10px] font-mono text-slate-400" v-if="risk.line">L{{ risk.line }}</span>
+                      <span class="text-slate-700"> {{ risk.description }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div v-if="selectedFile.suggestions?.length">
-              <h4 class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">建议</h4>
-              <div class="space-y-1">
-                <div v-for="(s, i) in selectedFile.suggestions" :key="i" class="flex items-start gap-2 text-sm py-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                  <span class="text-slate-700">{{ s.description }}</span>
+              <div v-if="selectedFile.suggestions?.length">
+                <h4 class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">建议</h4>
+                <div class="space-y-1">
+                  <div v-for="(s, i) in selectedFile.suggestions" :key="i" class="flex items-start gap-2 text-sm py-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                    <span class="text-slate-700">{{ s.description }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="selectedFile.crossChunkIssues?.length">
+                <h4 class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">跨块一致性问题</h4>
+                <div class="space-y-1">
+                  <p v-for="(issue, i) in selectedFile.crossChunkIssues" :key="i" class="text-sm text-slate-600 flex items-start gap-2 py-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                    {{ issue }}
+                  </p>
                 </div>
               </div>
             </div>
-
-            <div v-if="selectedFile.crossChunkIssues?.length">
-              <h4 class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">跨块一致性问题</h4>
-              <div class="space-y-1">
-                <p v-for="(issue, i) in selectedFile.crossChunkIssues" :key="i" class="text-sm text-slate-600 flex items-start gap-2 py-0.5">
-                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
-                  {{ issue }}
-                </p>
-              </div>
-            </div>
+          </div>
+          <div v-else class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 text-center">
+            <p class="text-sm text-slate-400">Select a file from the list to view details</p>
           </div>
         </div>
 
-        <CrossFileIssues v-if="rightTab === 'cross' && r?.crossFileIssues" :issues="r.crossFileIssues" />
-        <ArchitectureSuggestions v-if="rightTab === 'arch' && r?.architectureSuggestions" :suggestions="r.architectureSuggestions" />
+        <CrossFileIssues v-if="rightTab === 'cross'" :issues="r?.crossFileIssues || []" />
+        <ArchitectureSuggestions v-if="rightTab === 'arch'" :suggestions="r?.architectureSuggestions || []" />
       </div>
     </div>
   </div>
