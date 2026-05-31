@@ -3,6 +3,7 @@ package com.prassistant.pr.orchestrator;
 import com.prassistant.pr.aggregation.GlobalAggregator;
 import com.prassistant.pr.aggregation.model.GlobalReviewReport;
 import com.prassistant.pr.aggregation.model.PrMetadata;
+import com.prassistant.pr.config.PrReviewProperties;
 import com.prassistant.pr.diff.model.SanitizedDiff;
 import com.prassistant.pr.diff.service.DiffSanitizer;
 import com.prassistant.pr.orchestrator.event.ReviewEvent;
@@ -56,9 +57,11 @@ public class ReviewOrchestrator {
     public ReviewOrchestrator(DiffSanitizer diffSanitizer,
                               FileChunkAnalyzer fileChunkAnalyzer,
                               GlobalAggregator globalAggregator,
-                              ReviewEventPublisher eventPublisher) {
+                              ReviewEventPublisher eventPublisher,
+                              PrReviewProperties properties) {
         this(diffSanitizer, fileChunkAnalyzer, globalAggregator, eventPublisher,
-                DEFAULT_L2_TIMEOUT_SECONDS, DEFAULT_L3_TIMEOUT_SECONDS);
+                properties != null ? properties.getL2TimeoutSeconds() : DEFAULT_L2_TIMEOUT_SECONDS,
+                properties != null ? properties.getL3TimeoutSeconds() : DEFAULT_L3_TIMEOUT_SECONDS);
     }
 
     /** 测试专用 — 可注入自定义超时 */

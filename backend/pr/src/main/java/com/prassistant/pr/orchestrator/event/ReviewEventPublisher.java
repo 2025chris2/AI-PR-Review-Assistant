@@ -1,7 +1,9 @@
 package com.prassistant.pr.orchestrator.event;
 
+import com.prassistant.pr.config.PrReviewProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -24,11 +26,23 @@ public class ReviewEventPublisher {
     /** 默认 SSE 超时时间（毫秒） */
     static final long DEFAULT_SSE_TIMEOUT = 360_000L; // 6 分钟
 
+    private final long sseTimeoutMs;
+
     /**
      * 按 taskId 管理的 emitter 映射
      * CopyOnWriteArrayList 保证遍历时的线程安全性
      */
     private final ConcurrentMap<String, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
+
+    @Autowired
+    public ReviewEventPublisher(PrReviewProperties properties) {
+        this.sseTimeoutMs = properties != null ? properties.getSseTimeoutMs() : DEFAULT_SSE_TIMEOUT;
+    }
+
+    /** 测试专用 — 直接指定超时 */
+    ReviewEventPublisher(long sseTimeoutMs) {
+        this.sseTimeoutMs = sseTimeoutMs;
+    }
 
     /**
      * 为指定任务注册一个新的 SSE 连接
@@ -37,7 +51,7 @@ public class ReviewEventPublisher {
      * @return SseEmitter，用于向前端推送事件
      */
     public SseEmitter register(String taskId) {
-        SseEmitter emitter = new SseEmitter(DEFAULT_SSE_TIMEOUT);
+        SseEmitter emitter = new SseEmitter(sseTimeoutMs);
 
         // 注册清理回调
         emitter.onCompletion(() -> removeEmitter(taskId, emitter));
