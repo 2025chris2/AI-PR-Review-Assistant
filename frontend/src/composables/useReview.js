@@ -53,6 +53,11 @@ export function useReview() {
   }
 
   async function _submit(apiCall) {
+    // Close any existing SSE connection and polling before starting new one
+    sse?.close()
+    sse = null
+    stopPolling()
+
     report.value = null
     resetPipeline()
     filesInProgress.value = []

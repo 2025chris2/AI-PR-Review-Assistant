@@ -107,4 +107,21 @@ describe('useReview', () => {
     expect(review.taskId.value).toBe('g')
     expect(review.appState.value).toBe('progress')
   })
+
+  it('closes previous EventSource when submitting a second review', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 202,
+      json: () => Promise.resolve({ taskId: 't1', eventsUrl: '/e/t1', resultUrl: '/r/t1' }),
+    })
+    const review = useReview()
+    await review.submitRawDiff({ rawDiff: 'first' })
+    const es1 = EventSourceSpy.mock.results[0]?.value
+
+    await review.submitRawDiff({ rawDiff: 'second' })
+    const es2 = EventSourceSpy.mock.results[1]?.value
+
+    expect(es1.close).toHaveBeenCalled()
+    expect(es2).not.toBe(es1)
+  })
 })
