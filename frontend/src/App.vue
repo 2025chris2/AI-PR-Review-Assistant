@@ -1,11 +1,22 @@
-<script setup></script>
+<script setup>
+import { provide } from 'vue'
+import { useReview } from '@/composables/useReview'
+import AppHeader from '@/components/AppHeader.vue'
+import InputView from '@/components/input/InputView.vue'
+import ProgressView from '@/components/progress/ProgressView.vue'
+import ResultView from '@/components/result/ResultView.vue'
+
+const review = useReview()
+provide('review', review)
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <div class="min-h-screen flex flex-col">
+    <AppHeader />
+    <main class="flex-1">
+      <InputView v-if="review.appState.value === 'input'" />
+      <ProgressView v-if="review.appState.value === 'progress'" />
+      <ResultView v-if="review.appState.value === 'result'" />
+    </main>
+  </div>
 </template>
-
-<style scoped></style>
