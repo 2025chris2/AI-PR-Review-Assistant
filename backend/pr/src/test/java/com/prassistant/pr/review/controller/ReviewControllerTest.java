@@ -281,4 +281,139 @@ class ReviewControllerTest {
                     .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("rate limit")));
         }
     }
+
+    @Nested
+    @DisplayName("POST /api/v1/reviews/by-url — 从 PR URL 创建 Review")
+    class CreateReviewByUrl {
+
+        @Test
+        @DisplayName("有效 URL 含 token 应返回 202")
+        void shouldReturn202WithValidUrlAndToken() throws Exception {
+            PrMetadata metadata = PrMetadata.builder()
+                    .prUrl("https://github.com/TheAlgorithms/Java/pull/7427")
+                    .title("test")
+                    .author("octocat")
+                    .build();
+            GitHubPrData prData = new GitHubPrData(metadata, "diff --git a/Test.java b/Test.java\n@@ -1,1 +1,1 @@\n-old\n+new");
+
+            when(gitHubApiClient.fetchAll(eq("TheAlgorithms"), eq("Java"), eq(7427), eq("token-abc")))
+                    .thenReturn(prData);
+            when(orchestrator.review(anyString(), any(), anyString()))
+                    .thenReturn(GlobalReviewReport.builder()
+                            .overallSummary("test")
+                            .globalRiskLevel(GlobalReviewReport.RiskLevel.LOW)
+                            .build());
+
+            ByUrlReviewRequest request = new ByUrlReviewRequest(
+                    "https://github.com/TheAlgorithms/Java/pull/7427", "token-abc");
+
+            mockMvc.perform(post("/api/v1/reviews/by-url")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.taskId").isNotEmpty())
+                    .andExpect(jsonPath("$.eventsUrl").isString())
+                    .andExpect(jsonPath("$.resultUrl").isString());
+
+            verify(gitHubApiClient).fetchAll("TheAlgorithms", "Java", 7427, "token-abc");
+        }
+
+        @Test
+        @DisplayName("有效 URL 无 token 应返回 202（公开仓库）")
+        void shouldReturn202WithValidUrlNoToken() throws Exception {
+            PrMetadata metadata = PrMetadata.builder()
+                    .prUrl("https://github.com/org/repo/pull/1")
+                    .title("test")
+                    .author("octocat")
+                    .build();
+            GitHubPrData prData = new GitHubPrData(metadata, "diff --git a/Test.java b/Test.java\n@@ -1,1 +1,1 @@\n-old\n+new");
+
+            when(gitHubApiClient.fetchAll(eq("org"), eq("repo"), eq(1), eq((String) null)))
+                    .thenReturn(prData);
+            when(orchestrator.review(anyString(), any(), anyString()))
+                    .thenReturn(GlobalReviewReport.builder()
+                            .overallSummary("test")
+                            .globalRiskLevel(GlobalReviewReport.RiskLevel.LOW)
+                            .build());
+
+            ByUrlReviewRequest request = new ByUrlReviewRequest(
+                    "https://github.com/org/repo/pull/1", null);
+
+            mockMvc.perform(post("/api/v1/reviews/by-url")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.taskId").isNotEmpty());
+
+            verify(gitHubApiClient).fetchAll("org", "repo", 1, null);
+        }
+
+        @Test
+        @DisplayName("有效 URL 带 /changes 后缀应返回 202")
+        void shouldReturn202WithUrlChangesSuffix() throws Exception {
+            PrMetadata metadata = PrMetadata.builder()
+                    .prUrl("https://github.com/org/repo/pull/1")
+                    .title("test")
+                    .build();
+            GitHubPrData prData = new GitHubPrData(metadata, "diff --git a/Test.java b/Test.java\n@@ -1,1 +1,1 @@\n-old\n+new");
+
+            when(gitHubApiClient.fetchAll(eq("org"), eq("repo"), eq(1), eq("token")))
+                    .thenReturn(prData);
+            when(orchestrator.review(anyString(), any(), anyString()))
+                    .thenReturn(GlobalReviewReport.builder()
+                            .overallSummary("test")
+                            .globalRiskLevel(GlobalReviewReport.RiskLevel.LOW)
+                            .build());
+
+            ByUrlReviewRequest request = new ByUrlReviewRequest(
+                    "https://github.com/org/repo/pull/1/changes", "token");
+
+            mockMvc.perform(post("/api/v1/reviews/by-url")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isAccepted());
+
+            verify(gitHubApiClient).fetchAll("org", "repo", 1, "token");
+        }
+
+        @Test
+        @DisplayName("空 URL 应返回 400")
+        void shouldReturn400ForEmptyUrl() throws Exception {
+            ByUrlReviewRequest request = new ByUrlReviewRequest("", "token");
+
+            mockMvc.perform(post("/api/v1/reviews/by-url")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("url is required"));
+        }
+
+        @Test
+        @DisplayName("无效 URL 格式应返回 400")
+        void shouldReturn400ForInvalidUrl() throws Exception {
+            ByUrlReviewRequest request = new ByUrlReviewRequest(
+                    "https://example.com/not-github", "token");
+
+            mockMvc.perform(post("/api/v1/reviews/by-url")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("Invalid")));
+        }
+
+        @Test
+        @DisplayName("GitHub API 错误应透传")
+        void shouldPropagateGitHubApiError() throws Exception {
+            when(gitHubApiClient.fetchAll(anyString(), anyString(), anyInt(), anyString()))
+                    .thenThrow(GitHubApiException.notFound("org", "repo", 999));
+
+            ByUrlReviewRequest request = new ByUrlReviewRequest(
+                    "https://github.com/org/repo/pull/999", "token");
+
+            mockMvc.perform(post("/api/v1/reviews/by-url")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNotFound());
+        }
+    }
 }
