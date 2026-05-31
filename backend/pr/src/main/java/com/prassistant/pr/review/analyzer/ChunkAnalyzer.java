@@ -17,8 +17,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Map 阶段执行器 — 调用 AI 分析单个 Chunk，返回结构化结果
  *
- * <p>使用 Spring AI {@link ChatClient} 调用 AI，解析 JSON 响应为 {@link ChunkReviewResult}。
- * 异步执行（{@link Async}），支持文件级并行分析。</p>
+ * <p>使用 Spring AI {@link ChatClient} 调用 AI，解析 JSON 响应为 {@link ChunkReviewResult}。</p>
  */
 @Service
 public class ChunkAnalyzer {
