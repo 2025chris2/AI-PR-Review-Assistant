@@ -1,19 +1,16 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { inject, ref, computed } from 'vue'
 import ResultSummary from './ResultSummary.vue'
 import CrossFileIssues from './CrossFileIssues.vue'
 import ArchitectureSuggestions from './ArchitectureSuggestions.vue'
 import RiskBadge from './RiskBadge.vue'
 
-const props = defineProps({
-  report: { type: Object, default: null },
-})
-
-const emit = defineEmits(['new-review'])
+const review = inject('review')
+const r = review.report
 
 const sortedFiles = computed(() => {
-  const reports = props.report?.fileReports || []
-  const order = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+  const reports = r.value?.fileReports || []
+  const order = { HIGH: 0, MEDIUM: 1, LOW: 2, null: 3 }
   return [...reports].sort((a, b) => (order[a.riskLevel] ?? 3) - (order[b.riskLevel] ?? 3))
 })
 
@@ -28,11 +25,11 @@ const tabs = [
 ]
 
 const sidebarMetrics = computed(() => {
-  const reports = props.report?.fileReports
+  const reports = r.value?.fileReports
   if (!reports) return []
   const totalRisks = reports.reduce((sum, f) => sum + (f.risks?.length || 0), 0)
   const totalSuggestions = reports.reduce((sum, f) => sum + (f.suggestions?.length || 0), 0)
-  const time = props.report?.analysisTimeMs
+  const time = r.value?.analysisTimeMs
   return [
     { label: 'Files', value: reports.length },
     { label: 'Time', value: time ? `${(time / 1000).toFixed(1)}s` : '-' },
@@ -54,20 +51,19 @@ const statusAbbr = { ADDED: 'A', MODIFIED: 'M', REMOVED: 'D', RENAMED: 'R' }
 <template>
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
     <ResultSummary
-      v-if="report"
-      :overall-summary="report.overallSummary"
-      :pr-url="report.prUrl"
-      :global-risk-reason="report.globalRiskReason"
-      :risk-level="report.globalRiskLevel"
-      @new-review="emit('new-review')"
+      v-if="r"
+      :overall-summary="r.overallSummary"
+      :pr-url="r.prUrl"
+      :global-risk-reason="r.globalRiskReason"
+      :risk-level="r.globalRiskLevel"
+      @new-review="review.reset()"
     />
 
-    <div v-if="report?.error" class="bg-red-50 border border-red-200 rounded-xl p-4">
-      <p class="text-sm text-red-700">{{ report.error }}</p>
+    <div v-if="r && r.error" class="bg-red-50 border border-red-200 rounded-xl p-4">
+      <p class="text-sm text-red-700">{{ r.error }}</p>
     </div>
 
-    <div v-if="report && !report.error" class="flex flex-col md:flex-row gap-4">
-      <!-- Sidebar -->
+    <div v-if="r && !r.error" class="flex flex-col md:flex-row gap-4">
       <div class="w-full md:w-1/4 shrink-0">
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div class="px-3 py-2.5 border-b border-slate-100 flex items-center gap-2">
@@ -100,7 +96,6 @@ const statusAbbr = { ADDED: 'A', MODIFIED: 'M', REMOVED: 'D', RENAMED: 'R' }
         </div>
       </div>
 
-      <!-- Right Panel -->
       <div class="flex-1 min-w-0 min-h-0 space-y-3 flex flex-col">
         <div class="flex gap-1 bg-slate-100 rounded-lg p-1">
           <button v-for="t in tabs" :key="t.key" type="button" @click="rightTab = t.key"
@@ -110,7 +105,6 @@ const statusAbbr = { ADDED: 'A', MODIFIED: 'M', REMOVED: 'D', RENAMED: 'R' }
           </button>
         </div>
 
-        <!-- File Detail Tab -->
         <div v-if="rightTab === 'file' && selectedFile" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex-1 overflow-auto">
           <div class="flex items-start justify-between gap-3 mb-3">
             <div class="min-w-0">
@@ -167,8 +161,8 @@ const statusAbbr = { ADDED: 'A', MODIFIED: 'M', REMOVED: 'D', RENAMED: 'R' }
           </div>
         </div>
 
-        <CrossFileIssues v-if="rightTab === 'cross' && report?.crossFileIssues" :issues="report.crossFileIssues" />
-        <ArchitectureSuggestions v-if="rightTab === 'arch' && report?.architectureSuggestions" :suggestions="report.architectureSuggestions" />
+        <CrossFileIssues v-if="rightTab === 'cross' && r?.crossFileIssues" :issues="r.crossFileIssues" />
+        <ArchitectureSuggestions v-if="rightTab === 'arch' && r?.architectureSuggestions" :suggestions="r.architectureSuggestions" />
       </div>
     </div>
   </div>

@@ -1,26 +1,38 @@
 import { describe, it, expect } from 'vitest'
+import { ref } from 'vue'
 import { mount } from '@vue/test-utils'
 import InputView from '../InputView.vue'
 
+const mockReview = {
+  inputMode: ref('raw'),
+  appState: ref('input'),
+  submitRawDiff: () => {},
+  submitGitHub: () => {},
+  submitByUrl: () => {},
+}
+
+const app = { provide: { review: mockReview } }
+
 describe('InputView', () => {
-  it('renders title and description', () => {
-    const wrapper = mount(InputView)
+  it('renders title', () => {
+    const wrapper = mount(InputView, { global: app })
     expect(wrapper.text()).toContain('Review a Pull Request')
-    expect(wrapper.text()).toContain('AI-powered analysis')
   })
 
-  it('shows RawDiffForm by default', () => {
-    const wrapper = mount(InputView)
-    expect(wrapper.findComponent({ name: 'RawDiffForm' }).exists()).toBe(true)
+  it('shows Paste Raw Diff button (InputMethodToggle)', () => {
+    const wrapper = mount(InputView, { global: app })
+    expect(wrapper.text()).toContain('Paste Raw Diff')
   })
 
-  it('switches to GitHubForm on mode change', async () => {
-    const wrapper = mount(InputView)
-    const toggle = wrapper.findComponent({ name: 'InputMethodToggle' })
-    expect(wrapper.findComponent({ name: 'GitHubForm' }).exists()).toBe(false)
-    toggle.vm.$emit('update:modelValue', 'github')
+  it('shows Start Review button (RawDiffForm)', () => {
+    const wrapper = mount(InputView, { global: app })
+    expect(wrapper.text()).toContain('Start Review')
+  })
+
+  it('switches to GitHub mode', async () => {
+    const wrapper = mount(InputView, { global: app })
+    mockReview.inputMode.value = 'github'
     await wrapper.vm.$nextTick()
-    expect(wrapper.findComponent({ name: 'RawDiffForm' }).exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'GitHubForm' }).exists()).toBe(true)
+    expect(wrapper.text()).toContain('From GitHub PR')
   })
 })

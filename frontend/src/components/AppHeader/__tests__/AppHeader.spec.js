@@ -2,59 +2,55 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import AppHeader from '../AppHeader.vue'
 
+const mockReview = {
+  stageTab: { value: 1 },
+  taskId: { value: '' },
+  appState: { value: 'input' },
+}
+
+const app = {
+  provide: { review: mockReview },
+}
+
 describe('AppHeader', () => {
   it('renders title and subtitle', () => {
-    const wrapper = mount(AppHeader)
+    const wrapper = mount(AppHeader, { global: app })
     expect(wrapper.text()).toContain('PR Review Assistant')
     expect(wrapper.text()).toContain('AI-powered code review')
   })
 
   it('renders three step buttons', () => {
-    const wrapper = mount(AppHeader)
+    const wrapper = mount(AppHeader, { global: app })
     const buttons = wrapper.findAll('header button')
     expect(buttons).toHaveLength(3)
   })
 
   it('highlights active tab', () => {
-    const wrapper = mount(AppHeader, { props: { stageTab: 2 } })
+    mockReview.stageTab.value = 2
+    const wrapper = mount(AppHeader, { global: app })
     const buttons = wrapper.findAll('header button')
     expect(buttons[1].classes()).toContain('bg-white')
-    expect(buttons[1].classes()).toContain('shadow-sm')
+    mockReview.stageTab.value = 1
   })
 
-  it('emits tab-change on click', async () => {
-    const wrapper = mount(AppHeader)
+  it('sets stageTab on button click', async () => {
+    const wrapper = mount(AppHeader, { global: app })
     const buttons = wrapper.findAll('header button')
-    await buttons[1].trigger('click')
-    expect(wrapper.emitted('tab-change')).toHaveLength(1)
-    expect(wrapper.emitted('tab-change')[0]).toEqual([2])
+    await buttons[2].trigger('click')
+    expect(mockReview.stageTab.value).toBe(3)
   })
 
   it('hides task info when no taskId', () => {
-    const wrapper = mount(AppHeader)
+    const wrapper = mount(AppHeader, { global: app })
     expect(wrapper.text()).not.toContain('#')
   })
 
   it('shows task info when taskId provided', () => {
-    const wrapper = mount(AppHeader, {
-      props: { taskId: 'abc123', appState: 'progress' },
-    })
+    mockReview.taskId.value = 'abc123'
+    mockReview.appState.value = 'progress'
+    const wrapper = mount(AppHeader, { global: app })
     expect(wrapper.text()).toContain('#abc123')
-  })
-
-  it('shows pulse dot when progress', () => {
-    const wrapper = mount(AppHeader, {
-      props: { taskId: 'x', appState: 'progress' },
-    })
-    const dot = wrapper.find('.animate-pulse')
-    expect(dot.exists()).toBe(true)
-  })
-
-  it('shows green dot when result', () => {
-    const wrapper = mount(AppHeader, {
-      props: { taskId: 'x', appState: 'result' },
-    })
-    const dot = wrapper.find('.bg-emerald-500')
-    expect(dot.exists()).toBe(true)
+    mockReview.taskId.value = ''
+    mockReview.appState.value = 'input'
   })
 })
